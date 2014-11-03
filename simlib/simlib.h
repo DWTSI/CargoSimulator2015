@@ -23,6 +23,7 @@ extern struct master {
 /* Declare simlib functions. */
 
 extern void  init_simlib(void);
+extern void  event_list_display(int list);
 extern void  list_file(int option, int list);
 extern void  list_remove(int option, int list);
 extern void  timing(void);

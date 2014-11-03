@@ -20,6 +20,7 @@ struct master {
 /* Declare simlib functions. */
 
 void  init_simlib(void);
+void  event_list_display(int list);
 void  list_file(int option, int list);
 void  list_remove(int option, int list);
 void  timing(void);
@@ -84,6 +85,16 @@ void init_simlib()
     timest(0.0, 0);
 }
 
+void event_list_display() {
+
+    struct master *row = head[LIST_EVENT];
+
+    while (row != NULL) {
+        transfer = (*row).value;
+        printf("%f %f\n", transfer[EVENT_TIME], transfer[EVENT_TYPE]);
+        row = row->sr;
+    }
+}
 
 void list_file(int option, int list)
 {
