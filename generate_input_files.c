@@ -1,4 +1,4 @@
-#include "simlib.h"
+#include "simlib/simlib.h"
 #include <math.h>
 
 /*  EVENT_LAND1, EVENT_LAND2, and EVENT_LAND3 */
