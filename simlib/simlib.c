@@ -662,8 +662,8 @@ int random_integer(float prob_distrib[], int stream) /* Discrete-variate
 
     u = lcgrand(stream);
 
-    for (i = 1; u >= prob_distrib[i]; ++i)
-        ;
+    for (i = 1; u >= prob_distrib[i-1]; ++i)
+        u = u-prob_distrib[i-1];
     return i;
 }
 

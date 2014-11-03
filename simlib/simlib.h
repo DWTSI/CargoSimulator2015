@@ -1,3 +1,6 @@
+#ifndef SIMLIB_H
+#define SIMLIB_H
+
 /* This is simlib.h. */
 
 /* Include files. */
@@ -39,3 +42,4 @@ extern float lcgrand(int stream);
 extern void  lcgrandst(long zset, int stream);
 extern long  lcgrandgt(int stream);
 
+#endif

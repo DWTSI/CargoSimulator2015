@@ -1,3 +1,6 @@
+#ifndef SIMLIBDEFS_H
+#define SIMLIBDEFS_H
+
 /* This is simlibdefs.h. */
 
 /* Define limits. */
@@ -33,3 +36,4 @@
 #define EVENT_TIME   1      /* Attribute 1 in event list is event time. */
 #define EVENT_TYPE   2      /* Attribute 2 in event list is event type. */
 
+#endif
