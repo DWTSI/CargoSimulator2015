@@ -1,10 +1,10 @@
 #include "simlib/simlib.h"
 #include <math.h>
 
-/*  EVENT_LAND1, EVENT_LAND2, and EVENT_LAND3 */
-/*  must stay as 1, 2, and 3, respectively    */
-/*  or else schedule_input_list will        */
-/*  schedule the wrong events.                */
+/*  EVENT_LAND1, EVENT_LAND2, and EVENT_LAND3
+	must stay as 1, 2, and 3, respectively
+	or else schedule_input_list will
+	schedule the wrong events.  */
 #define EVENT_LAND1         1  /*plane 1 lands*/
 #define EVENT_LAND2         2  /*plane 2 lands*/
 #define EVENT_LAND3         3  /*plane 3 lands*/
@@ -32,11 +32,11 @@
 #define TIME_STORM_DUR      4  /*average duration of a storm*/
 #define TIME_STORM_VAR      2  /*variation in storm duration*/
 
-/* This code is irrelevant to the project.  */
-/* I was going to write a simpler simulation*/
-/* to get familiar with simlib, and these   */
-/* variables were going to be used for that */
-/* one.                                     */
+/* 	This code is irrelevant to the project.
+ 	I was going to write a simpler simulation
+ 	to get familiar with simlib, and these
+ 	variables were going to be used for that
+	one.  */
 #define TIME_LANDED        10  /*amount of time plane is on ground before taking off*/
 #define TIME_LAND_VAR       2  /*varation in the time plane is landed (plus-or-minus this value)*/
 #define TIME_REPAIR        15  /*amount of time to repair plane*/
@@ -56,7 +56,6 @@ void generate_input_files(void);
 void generate_landing_list(FILE*, float);
 void generate_storm_list(FILE*, float);
 void schedule_input_list(FILE*);
-//void schedule_storm_list(FILE*);
 void plane_land(void);
 
 int main() {
@@ -79,6 +78,7 @@ int main() {
     */
 }
 
+
 /*  Generates the input files, plane_list.dat and storm_list.dat
     The format of each input file is the same:
     EVENT_TYPE <space> EVENT_TIME
@@ -87,7 +87,6 @@ int main() {
     EVENT_TYPE <space> EVENT_TIME
     EOF
 */
-
 void generate_input_files(void) {
     plane_list = fopen("plane_list.dat", "w");
     storm_list = fopen("storm_list.dat", "w");
@@ -99,6 +98,7 @@ void generate_input_files(void) {
     fclose(plane_list);
     fclose(storm_list);
 }
+
 
 void generate_landing_list(FILE *file, float sim_time) {
     if (sim_time < TIME_LAND_FREQ-TIME_LAND_FREQ_VAR)
@@ -139,17 +139,3 @@ void schedule_input_list(FILE *file) {
         event_schedule(time, type);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
