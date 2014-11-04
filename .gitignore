@@ -1,1 +1,7 @@
 *.cbp
+*.depend
+*.layout
+*.bak
+
+bin/
+obj/

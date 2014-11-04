@@ -20,7 +20,8 @@ struct master {
 /* Declare simlib functions. */
 
 void  init_simlib(void);
-void  event_list_display(int list);
+void  event_list_display();
+int   list_delete(int list, float value, int attribute);
 void  list_file(int option, int list);
 void  list_remove(int option, int list);
 void  timing(void);
@@ -86,14 +87,93 @@ void init_simlib()
 }
 
 void event_list_display() {
+    float *value;
+
+    if (head[LIST_EVENT] == NULL) {
+        printf("List %d is empty.", LIST_EVENT);
+        return;
+    }
 
     struct master *row = head[LIST_EVENT];
 
     while (row != NULL) {
-        transfer = (*row).value;
-        printf("%f %f\n", transfer[EVENT_TIME], transfer[EVENT_TYPE]);
+        value = (*row).value;
+        printf("%f %f\n", value[EVENT_TIME], value[EVENT_TYPE]);
         row = row->sr;
     }
+}
+
+
+/*  Deletes the (logically) first record from list "list" with
+    a value "value" for attribute "attribute."  Places the
+    attributes of deleted record in the transfer array.
+
+    For error condition (e.g., there is no matching record in
+    the list), return a value of 0. Otherwise, return value
+    of 1. */
+int list_delete(int list, float value, int attribute) {
+
+    struct master *row = head[list];
+    struct master *prev, *next;
+
+    /* list is empty */
+    if (list_size[list] == 0) {
+        printf("Cannot delete item from empty list %d", list);
+        exit(1);
+    }
+
+    /* List only has one item */
+    if (list_size[list] == 1) {
+        transfer = head[list]->value;
+        /* If the desired attribute isn't found, return 0 */
+        if (transfer[attribute] != value)
+            return 0;
+
+        /* else, the desired attribute is found */
+        head[list] = NULL;
+        tail[list] = NULL;
+
+        /* Update the area under the number-in-list curve. */
+        timest((float)list_size[list], TIM_VAR + list);
+        return 1;
+    }
+
+
+    /*check the rest of the nodes*/
+    while (row != NULL) {
+        transfer = row->value;
+        if (transfer[attribute] == value) {
+            prev = row->pr;
+            next = row->sr;
+            /* delete the head node */
+            if (row == head[list])
+                head[list] = row->sr;
+
+            /* delete the tail node */
+            if (row == tail[list])
+                tail[list] = row->pr;
+
+            if (prev != NULL)
+                prev->sr = next;
+            if (next != NULL)
+                next->pr = prev;
+
+            row = NULL;
+            free(row);
+            list_size[list]--;
+
+            /* Update the area under the number-in-list curve. */
+            timest((float)list_size[list], TIM_VAR + list);
+
+            return 1;
+        }
+        else {
+            row = (*row).sr;
+        }
+    }// end while
+
+    /* Didn't find value in list, return 0 */
+    return 0;
 }
 
 void list_file(int option, int list)
@@ -722,7 +802,7 @@ float erlang(int m, float mean, int stream)  /* Erlang variate generation
       execute
           lcgrandst(zset, stream);
       where lcgrandst is a void function and zset must be a long set to
-      the desired seed, a number between 1 and 2147483646 (inclusive). 
+      the desired seed, a number between 1 and 2147483646 (inclusive).
       Default seeds for all 100 streams are given in the code.
 
    3. To get the current (most recently used) integer in the sequence
