@@ -22,6 +22,7 @@ struct master {
 void  init_simlib(void);
 void  event_list_display();
 int   list_delete(int list, float value, int attribute);
+void  event_insert(float time_of_event, int type_of_event);
 void  list_file(int option, int list);
 void  list_remove(int option, int list);
 void  timing(void);
@@ -174,6 +175,84 @@ int list_delete(int list, float value, int attribute) {
 
     /* Didn't find value in list, return 0 */
     return 0;
+}
+
+
+/*  Inserts a new event into the event list.  If the two event
+    records have the same event time, it gives preference to the
+    event with the lowest-numbered event type.  */
+void event_insert(float time_of_event, int type_of_event) {
+
+    struct master *row = head[LIST_EVENT];
+    struct master *event = (struct master *) malloc(sizeof(struct master));
+    struct master *prev, *next;
+    float row_time, event_time;
+
+    event->value = (float *)calloc(maxatr + 1, sizeof(float));
+    event->value[EVENT_TIME] = time_of_event;
+    event->value[EVENT_TYPE] = type_of_event;
+
+    /* Insert code here for zero item and one item cases */
+
+    list_size[LIST_EVENT]++;
+
+    /* If list is empty, initialize it with the event.  */
+    if (row == NULL) {
+        head[LIST_EVENT] = event;
+        tail[LIST_EVENT] = event;
+        event->pr = NULL;
+        event->sr = NULL;
+    }
+
+
+    /*  If there is initially only one item in the list */
+    if (list_size[LIST_EVENT] == 2) {
+        if (time_of_event <= row->value[EVENT_TIME]) {
+            head[LIST_EVENT] = event;
+            event->sr = row;
+            row->pr = event;
+        }
+        else {
+            tail[LIST_EVENT] = event;
+            event->pr = row;
+            row->sr = event;
+        }
+        return;
+    }
+
+    while (row != NULL) {
+
+        /* If two events have the same time, give preference to the one with
+           the lower-numbered event type. */
+        if (  (time_of_event < row->value[EVENT_TIME]) ||
+              (time_of_event == row->value[EVENT_TIME] && type_of_event < row->value[EVENT_TYPE])) {
+
+            /* if at the beginning of the list, change the head to the new event */
+            if (row->pr == NULL) {
+                head[LIST_EVENT] = event;
+            }
+            prev = row->pr;
+            next = row;
+            event->pr = prev;
+            event->sr = next;
+            if (prev != NULL)
+                prev->sr = event;
+            next->pr = event;   /*no need to check prev for NULL because it's also row */
+
+            row = NULL;
+        }
+        /* If it's reached the end of the list, add the event to the end */
+        else if (row->sr == NULL) {
+            tail[LIST_EVENT] = NULL;
+            row->sr = event;
+            event->pr = row;
+            event->sr = NULL;
+            row = NULL;
+        }
+        else {
+            row = row->sr;
+        }
+    }
 }
 
 void list_file(int option, int list)

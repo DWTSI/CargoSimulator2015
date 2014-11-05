@@ -52,6 +52,7 @@ typedef enum { false, true } bool;
 
 FILE *plane_list, *storm_list;
 
+void test_event_insert();
 void generate_input_files(void);
 void generate_landing_list(FILE*, float);
 void generate_storm_list(FILE*, float);
@@ -60,7 +61,11 @@ void plane_land(void);
 
 int main() {
 
-    generate_input_files();
+    //generate_input_files();
+
+    init_simlib();
+
+    test_event_insert();
 
     /*
     init_simlib();
@@ -78,6 +83,39 @@ int main() {
     */
 }
 
+
+
+void test_event_insert() {
+    /*event_schedule(0, 2);
+    event_schedule(1, 1);
+    event_schedule(2, 2);
+    event_schedule(3, 3);
+    event_schedule(4, 2);
+    event_schedule(5, 1);
+    event_schedule(6, 3);
+    */event_schedule(7, 4);
+
+    printf("%d\n", list_size[LIST_EVENT]);
+
+    event_list_display();
+
+    printf("\n");
+
+    //list_delete(LIST_EVENT, 2, EVENT_TYPE);
+    /*event_insert(3.5, 1);
+    event_insert(3.75, 2);
+    event_insert(3.9, 3);
+    */event_insert(6, 1);
+
+    event_insert(7, 2);
+    event_insert(7, 5);
+
+    printf("%d\n", list_size[LIST_EVENT]);
+
+    event_list_display();
+
+    //printf("\n%f %f\n", transfer[EVENT_TIME], transfer[EVENT_TYPE]);
+}
 
 /*  Generates the input files, plane_list.dat and storm_list.dat
     The format of each input file is the same:
