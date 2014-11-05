@@ -20,6 +20,9 @@ struct master {
 /* Declare simlib functions. */
 
 void  init_simlib(void);
+void  event_list_display();
+int   list_delete(int list, float value, int attribute);
+void  event_insert(float time_of_event, int type_of_event);
 void  list_file(int option, int list);
 void  list_remove(int option, int list);
 void  timing(void);
@@ -84,6 +87,173 @@ void init_simlib()
     timest(0.0, 0);
 }
 
+void event_list_display() {
+    float *value;
+
+    if (head[LIST_EVENT] == NULL) {
+        printf("List %d is empty.", LIST_EVENT);
+        return;
+    }
+
+    struct master *row = head[LIST_EVENT];
+
+    while (row != NULL) {
+        value = (*row).value;
+        printf("%f %f\n", value[EVENT_TIME], value[EVENT_TYPE]);
+        row = row->sr;
+    }
+}
+
+
+/*  Deletes the (logically) first record from list "list" with
+    a value "value" for attribute "attribute."  Places the
+    attributes of deleted record in the transfer array.
+
+    For error condition (e.g., there is no matching record in
+    the list), return a value of 0. Otherwise, return value
+    of 1. */
+int list_delete(int list, float value, int attribute) {
+
+    struct master *row = head[list];
+    struct master *prev, *next;
+
+    /* list is empty */
+    if (list_size[list] == 0) {
+        printf("Cannot delete item from empty list %d", list);
+        exit(1);
+    }
+
+    /* List only has one item */
+    if (list_size[list] == 1) {
+        transfer = head[list]->value;
+        /* If the desired attribute isn't found, return 0 */
+        if (transfer[attribute] != value)
+            return 0;
+
+        /* else, the desired attribute is found */
+        head[list] = NULL;
+        tail[list] = NULL;
+
+        /* Update the area under the number-in-list curve. */
+        timest((float)list_size[list], TIM_VAR + list);
+        return 1;
+    }
+
+
+    /*check the rest of the nodes*/
+    while (row != NULL) {
+        transfer = row->value;
+        if (transfer[attribute] == value) {
+            prev = row->pr;
+            next = row->sr;
+            /* delete the head node */
+            if (row == head[list])
+                head[list] = row->sr;
+
+            /* delete the tail node */
+            if (row == tail[list])
+                tail[list] = row->pr;
+
+            if (prev != NULL)
+                prev->sr = next;
+            if (next != NULL)
+                next->pr = prev;
+
+            row = NULL;
+            free(row);
+            list_size[list]--;
+
+            /* Update the area under the number-in-list curve. */
+            timest((float)list_size[list], TIM_VAR + list);
+
+            return 1;
+        }
+        else {
+            row = (*row).sr;
+        }
+    }// end while
+
+    /* Didn't find value in list, return 0 */
+    return 0;
+}
+
+
+/*  Inserts a new event into the event list.  If the two event
+    records have the same event time, it gives preference to the
+    event with the lowest-numbered event type.  */
+void event_insert(float time_of_event, int type_of_event) {
+
+    struct master *row = head[LIST_EVENT];
+    struct master *event = (struct master *) malloc(sizeof(struct master));
+    struct master *prev, *next;
+    float row_time, event_time;
+
+    event->value = (float *)calloc(maxatr + 1, sizeof(float));
+    event->value[EVENT_TIME] = time_of_event;
+    event->value[EVENT_TYPE] = type_of_event;
+
+    /* Insert code here for zero item and one item cases */
+
+    list_size[LIST_EVENT]++;
+
+    /* If list is empty, initialize it with the event.  */
+    if (row == NULL) {
+        head[LIST_EVENT] = event;
+        tail[LIST_EVENT] = event;
+        event->pr = NULL;
+        event->sr = NULL;
+    }
+
+
+    /*  If there is initially only one item in the list */
+    if (list_size[LIST_EVENT] == 2) {
+        if (time_of_event <= row->value[EVENT_TIME]) {
+            head[LIST_EVENT] = event;
+            event->sr = row;
+            row->pr = event;
+        }
+        else {
+            tail[LIST_EVENT] = event;
+            event->pr = row;
+            row->sr = event;
+        }
+        return;
+    }
+
+    while (row != NULL) {
+
+        /* If two events have the same time, give preference to the one with
+           the lower-numbered event type. */
+        if (  (time_of_event < row->value[EVENT_TIME]) ||
+              (time_of_event == row->value[EVENT_TIME] && type_of_event < row->value[EVENT_TYPE])) {
+
+            /* if at the beginning of the list, change the head to the new event */
+            if (row->pr == NULL) {
+                head[LIST_EVENT] = event;
+            }
+            prev = row->pr;
+            next = row;
+            event->pr = prev;
+            event->sr = next;
+            if (prev != NULL)
+                prev->sr = event;
+            next->pr = event;   /*no need to check prev for NULL because it's also row */
+
+            row = NULL;
+        }
+        /* If it's reached the end of the list, add the event to the end */
+        else if (row->sr == NULL) {
+            tail[LIST_EVENT] = NULL;
+            row->sr = event;
+            event->pr = row;
+            event->sr = NULL;
+            row = NULL;
+        }
+        else {
+            row = row->sr;
+        }
+    }
+}
 
 void list_file(int option, int list)
 {
@@ -711,7 +881,7 @@ float erlang(int m, float mean, int stream)  /* Erlang variate generation
       execute
           lcgrandst(zset, stream);
       where lcgrandst is a void function and zset must be a long set to
-      the desired seed, a number between 1 and 2147483646 (inclusive). 
+      the desired seed, a number between 1 and 2147483646 (inclusive).
       Default seeds for all 100 streams are given in the code.
 
    3. To get the current (most recently used) integer in the sequence
