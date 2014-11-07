@@ -6,7 +6,7 @@
 
 int storm_state, taxi_state;
 
-//void log_event(int time, int event_type, int taxi_state, )
+void log_event(int time, int event_type, int taxi_state, int plane_id, bool storm, int berth_number);
 void plane_land();
 void storm_start();
 void storm_end();
@@ -83,6 +83,19 @@ int main2() {
     }// end simulation loop
 }
 
+/* log some event into the log list */
+/* NOT ACTUALLY TESTED YET. */
+void log_event(int time, int event_type, int taxi_state, int plane_id, bool storm, int berth_number) {
+    transfer[0] = time;
+    transfer[1] = event_type;
+    transfer[2] = taxi_state;
+    transfer[3] = plane_id;
+    transfer[4] = storm;
+    transfer[5] = berth_number;
+
+    /* Add attributes in transfer to log list */
+    list_file(INCREASING, LIST_LOG);
+}
 
 void plane_land() {
     /* Add the plane in transfer to the runway queue */
