@@ -2,6 +2,7 @@
 *.depend
 *.layout
 *.bak
+*.dat
 
 bin/
 obj/

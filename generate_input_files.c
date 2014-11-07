@@ -11,7 +11,7 @@ void generate_storm_list(FILE*, float);
 void schedule_input_list(FILE*);
 void plane_land(void);
 
-int main() {
+int main2() {
 
     //generate_input_files();
 

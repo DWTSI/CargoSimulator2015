@@ -72,9 +72,6 @@
 #define STORM_ON  1
 
 
-
-//typedef enum { false, true } bool;
-
 extern struct plane {
     int type;
     float land_time;
