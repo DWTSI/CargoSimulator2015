@@ -20,6 +20,7 @@ struct master {
 /* Declare simlib functions. */
 
 void  init_simlib(void);
+void  list_display(int list, int num_attributes);
 void  event_list_display();
 int   list_delete(int list, float value, int attribute);
 void  event_insert(float time_of_event, int type_of_event);
@@ -87,21 +88,29 @@ void init_simlib()
     timest(0.0, 0);
 }
 
-void event_list_display() {
+void list_display(int list, int num_attributes) {
     float *value;
+    int i;
 
-    if (head[LIST_EVENT] == NULL) {
-        printf("List %d is empty.", LIST_EVENT);
+    if (head[list] == NULL) {
+        printf("List %d is empty.", list);
         return;
     }
 
-    struct master *row = head[LIST_EVENT];
+    struct master *row = head[list];
 
     while (row != NULL) {
         value = (*row).value;
-        printf("%f %f\n", value[EVENT_TIME], value[EVENT_TYPE]);
+        for (i=1; i<=num_attributes; i++) {
+            printf("%f ", value[i]);
+        }
+        printf("\n");
         row = row->sr;
     }
+}
+
+void event_list_display() {
+    list_display(LIST_EVENT, 2);
 }
 
 
