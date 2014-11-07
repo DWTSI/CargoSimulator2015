@@ -1,54 +1,6 @@
 #include "simlib/simlib.h"
+#include "simulation.h"
 #include <math.h>
-
-/*  EVENT_LAND1, EVENT_LAND2, and EVENT_LAND3
-	must stay as 1, 2, and 3, respectively
-	or else schedule_input_list will
-	schedule the wrong events.  */
-#define EVENT_LAND1         1  /*plane 1 lands*/
-#define EVENT_LAND2         2  /*plane 2 lands*/
-#define EVENT_LAND3         3  /*plane 3 lands*/
-#define EVENT_TAKEOFF       4  /*plane takes off*/
-#define EVENT_STORM_START   5  /*storm starts*/
-#define EVENT_STORM_END     6  /*storm ends*/
-
-/*  not for this simulation, was originally for a simpler
-    test simulation I was going to write to become more
-    familiar with simlib. */
-#define EVENT_REPAIR  9  /*plane is repaired*/
-
-
-#define TIME_HOUR    1
-#define TIME_DAY    24
-#define TIME_YEAR 8760
-
-/*Relative frequencies of the plane types*/
-#define FREQ_PLANE1 0.25
-#define FREQ_PLANE2 0.25
-#define FREQ_PLANE3 0.5
-
-#define TIME_LAND_FREQ     11  /*how frequently planes land*/
-#define TIME_LAND_FREQ_VAR  2  /*variation in plane landing frequency*/
-#define TIME_STORM_DUR      4  /*average duration of a storm*/
-#define TIME_STORM_VAR      2  /*variation in storm duration*/
-
-/* 	This code is irrelevant to the project.
- 	I was going to write a simpler simulation
- 	to get familiar with simlib, and these
- 	variables were going to be used for that
-	one.  */
-#define TIME_LANDED        10  /*amount of time plane is on ground before taking off*/
-#define TIME_LAND_VAR       2  /*varation in the time plane is landed (plus-or-minus this value)*/
-#define TIME_REPAIR        15  /*amount of time to repair plane*/
-#define TIME_REPAIR_VAR     3  /*varation in the time taken to fix plane (plus-or-minus this value)*/
-
-#define STREAM_INTERARRIVAL   1
-#define STREAM_PLANE_TYPE     2
-#define STREAM_LOADING        3
-#define STREAM_STORM_DURATION 4
-#define STREAM_STORM_TIME     5
-
-typedef enum { false, true } bool;
 
 FILE *plane_list, *storm_list;
 
@@ -84,7 +36,7 @@ int main() {
 }
 
 
-
+/* testing out the event_insert method */
 void test_event_insert() {
     /*event_schedule(0, 2);
     event_schedule(1, 1);
