@@ -6,18 +6,21 @@ FILE *plane_list, *storm_list;
 
 void test_event_insert();
 void generate_input_files(void);
-void generate_landing_list(FILE*, float);
-void generate_storm_list(FILE*, float);
+void generate_landing_list(FILE*, int);
+void generate_storm_list(FILE*, int);
 void schedule_input_list(FILE*);
 void plane_land(void);
 
-int main2() {
+int main() {
 
-    //generate_input_files();
+    printf("%d\n", TIME_DAY);
+    printf("%f\n", (float)TIME_DAY);
 
-    init_simlib();
+    generate_input_files();
 
-    test_event_insert();
+    //init_simlib();
+
+    //test_event_insert();
 
     /*
     init_simlib();
@@ -80,7 +83,7 @@ void test_event_insert() {
 void generate_input_files(void) {
     plane_list = fopen("plane_list.dat", "w");
     storm_list = fopen("storm_list.dat", "w");
-    float sim_time = TIME_YEAR;
+    int sim_time = TIME_YEAR;
 
     generate_landing_list(plane_list, sim_time);
     generate_storm_list(storm_list, sim_time);
@@ -90,30 +93,30 @@ void generate_input_files(void) {
 }
 
 
-void generate_landing_list(FILE *file, float sim_time) {
+void generate_landing_list(FILE *file, int sim_time) {
     if (sim_time < TIME_LAND_FREQ-TIME_LAND_FREQ_VAR)
         return;
 
-    float time = 0;
+    int time = 0;
     while (time < sim_time) {
         float prob_distrib[] = {FREQ_PLANE1, FREQ_PLANE2, FREQ_PLANE3};
         int type = random_integer(prob_distrib, STREAM_PLANE_TYPE);
-        float r = uniform(TIME_LAND_FREQ-TIME_LAND_FREQ_VAR, TIME_LAND_FREQ+TIME_LAND_FREQ_VAR, STREAM_INTERARRIVAL);
-        fprintf(file, "%d %f\n", type, time + r);
+        int r = (int)uniform(TIME_LAND_FREQ-TIME_LAND_FREQ_VAR, TIME_LAND_FREQ+TIME_LAND_FREQ_VAR, STREAM_INTERARRIVAL);
+        fprintf(file, "%d %d\n", type, time + r);
         time = time + r;
     }
     return;
 }
 
-void generate_storm_list(FILE *file, float sim_time) {
-    float time = 0;
+void generate_storm_list(FILE *file, int sim_time) {
+    int time = 0;
     while (time < sim_time) {
-        float r = expon(TIME_HOUR*48, STREAM_STORM_TIME);
+        int r = (int)expon(TIME_HOUR*TIME_DAY*2, STREAM_STORM_TIME);
         time = time + r;
-        fprintf(file, "%d %f\n", EVENT_STORM_START, time);
-        float duration = uniform(TIME_STORM_DUR-TIME_STORM_VAR, TIME_STORM_DUR+TIME_STORM_VAR, STREAM_STORM_DURATION);
+        fprintf(file, "%d %d\n", EVENT_STORM_START, time);
+        int duration = (int)uniform(TIME_STORM_DUR-TIME_STORM_VAR, TIME_STORM_DUR+TIME_STORM_VAR, STREAM_STORM_DURATION);
         time = time + duration;
-        fprintf(file, "%d %f\n", EVENT_STORM_END, time);
+        fprintf(file, "%d %d\n", EVENT_STORM_END, time);
     }
     return;
 }

@@ -6,19 +6,21 @@
 
 int storm_state, taxi_state;
 
+//void log_event(int time, int event_type, int taxi_state, )
 void plane_land();
 void storm_start();
 void storm_end();
 void berth();
 void deberth();
 
-int main() {
+int main2() {
 
     FILE *plane_list, *storm_list;
 
     init_simlib();
 
-    maxatr = 4;
+    /* Set max attributes in a list to 6, for simlog */
+    maxatr = 6;
 
     storm_state = STORM_OFF;
     taxi_state  = TAXI_IDLE;
@@ -33,7 +35,9 @@ int main() {
     fclose(plane_list);
     fclose(storm_list);
 
-    while(list_size[LIST_EVENT] != 0) {
+    printf("Test");
+
+    while(0) {//list_size[LIST_EVENT] != 0) {
 
         timing();
 
