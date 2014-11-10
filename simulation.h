@@ -29,19 +29,20 @@
 #define EVENT_REPAIR  9  /*plane is repaired*/
 
 
-#define TIME_HOUR    1
-#define TIME_DAY    24
-#define TIME_YEAR 8760
+/* Time units are in minutes */
+#define TIME_HOUR     60
+#define TIME_DAY    1440
+#define TIME_YEAR 525600
 
 /*Relative frequencies of the plane types*/
 #define FREQ_PLANE1 0.25
 #define FREQ_PLANE2 0.25
 #define FREQ_PLANE3 0.5
 
-#define TIME_LAND_FREQ     11  /*how frequently planes land*/
-#define TIME_LAND_FREQ_VAR  2  /*variation in plane landing frequency*/
-#define TIME_STORM_DUR      4  /*average duration of a storm*/
-#define TIME_STORM_VAR      2  /*variation in storm duration*/
+#define TIME_LAND_FREQ      TIME_HOUR*11 /*how frequently planes land*/
+#define TIME_LAND_FREQ_VAR  TIME_HOUR*2  /*variation in plane landing frequency*/
+#define TIME_STORM_DUR      TIME_HOUR*4  /*average duration of a storm*/
+#define TIME_STORM_VAR      TIME_HOUR*2  /*variation in storm duration*/
 
 
 /* 	This code is irrelevant to the project.
@@ -49,10 +50,10 @@
  	to get familiar with simlib, and these
  	variables were going to be used for that
 	one.  */
-#define TIME_LANDED        10  /*amount of time plane is on ground before taking off*/
-#define TIME_LAND_VAR       2  /*varation in the time plane is landed (plus-or-minus this value)*/
-#define TIME_REPAIR        15  /*amount of time to repair plane*/
-#define TIME_REPAIR_VAR     3  /*varation in the time taken to fix plane (plus-or-minus this value)*/
+#define TIME_LANDED        TIME_HOUR*10  /*amount of time plane is on ground before taking off*/
+#define TIME_LAND_VAR      TIME_HOUR*2  /*varation in the time plane is landed (plus-or-minus this value)*/
+#define TIME_REPAIR        TIME_HOUR*15  /*amount of time to repair plane*/
+#define TIME_REPAIR_VAR    TIME_HOUR*3  /*varation in the time taken to fix plane (plus-or-minus this value)*/
 
 #define STREAM_INTERARRIVAL   1
 #define STREAM_PLANE_TYPE     2
@@ -64,9 +65,10 @@
 #define LIST_DEBERTH  2  /* List number for the deberthing queue (can only contain planes from berth list) */
 /* NOTE: May not include this, and use a custom 3-element array of structs instead */
 #define LIST_BERTH    3  /* List number for the berths (max size = 3) */
-#define LIST_AVG_PLANES_RUNWAY
-#define LIST_AVG_PLANES_DEBERTH
-#define LIST_TAXI_TIMES
+#define LIST_AVG_PLANES_RUNWAY   4
+#define LIST_AVG_PLANES_DEBERTH  5
+#define LIST_TAXI_TIMES          6
+#define LIST_LOG  7
 
 #define STORM_OFF 0
 #define STORM_ON  1

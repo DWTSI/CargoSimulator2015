@@ -6,19 +6,21 @@
 
 int storm_state, taxi_state;
 
+void log_event(int time, int event_type, int taxi_state, int plane_id, bool storm, int berth_number);
 void plane_land();
 void storm_start();
 void storm_end();
 void berth();
 void deberth();
 
-int main() {
+int main2() {
 
     FILE *plane_list, *storm_list;
 
     init_simlib();
 
-    maxatr = 4;
+    /* Set max attributes in a list to 6, for simlog */
+    maxatr = 6;
 
     storm_state = STORM_OFF;
     taxi_state  = TAXI_IDLE;
@@ -33,7 +35,9 @@ int main() {
     fclose(plane_list);
     fclose(storm_list);
 
-    while(list_size[LIST_EVENT] != 0) {
+    printf("Test");
+
+    while(0) {//list_size[LIST_EVENT] != 0) {
 
         timing();
 
@@ -79,6 +83,19 @@ int main() {
     }// end simulation loop
 }
 
+/* log some event into the log list */
+/* NOT ACTUALLY TESTED YET. */
+void log_event(int time, int event_type, int taxi_state, int plane_id, bool storm, int berth_number) {
+    transfer[0] = time;
+    transfer[1] = event_type;
+    transfer[2] = taxi_state;
+    transfer[3] = plane_id;
+    transfer[4] = storm;
+    transfer[5] = berth_number;
+
+    /* Add attributes in transfer to log list */
+    list_file(INCREASING, LIST_LOG);
+}
 
 void plane_land() {
     /* Add the plane in transfer to the runway queue */
