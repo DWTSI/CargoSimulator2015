@@ -73,6 +73,8 @@
 #define STORM_OFF 0
 #define STORM_ON  1
 
+typedef enum { false, true } bool;
+
 
 extern struct plane {
     int type;

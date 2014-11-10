@@ -11,7 +11,7 @@ void generate_storm_list(FILE*, int);
 void schedule_input_list(FILE*);
 void plane_land(void);
 
-int main() {
+int main2() {
 
     printf("%d\n", TIME_DAY);
     printf("%f\n", (float)TIME_DAY);
