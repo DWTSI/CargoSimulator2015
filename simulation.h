@@ -13,6 +13,16 @@
 #define EVENT_BERTH         6  /*a plane berths*/
 #define EVENT_DEBERTH       7  /*a plane deberths and takes off*/
 
+/*  The output log shouldn't need to use this event. */
+#define EVENT_BERTH_FINISH  8  /*a berth with a plane finishes loading*/
+
+
+/*  transfer indices for the event log */
+#define PLANE_TYPE   1
+#define TAXI_STATE   3
+#define PLANE_ID     4
+#define STORM_STATE  5
+#define BERTH_NUMBER 6
 
 
 /*  These define the different states for the taxi.
@@ -23,13 +33,10 @@
 #define TAXI_BERTHING          3   /* Taxi is berthing a plane */
 #define TAXI_DEBERTHING        4   /* Taxi is deberthing a plane */
 
-/*  not for this simulation, was originally for a simpler
-    test simulation I was going to write to become more
-    familiar with simlib. */
-#define EVENT_REPAIR  9  /*plane is repaired*/
 
 
 /* Time units are in minutes */
+#define TIME_MINUTE    1
 #define TIME_HOUR     60
 #define TIME_DAY    1440
 #define TIME_YEAR 525600
@@ -73,17 +80,25 @@
 #define STORM_OFF 0
 #define STORM_ON  1
 
+#define NUMBER_OF_BERTHS 3
+#define BERTH_TAKEN 1
+#define BERTH_FREE  0
+#define BERTH_TAKEN_LOADING     2
+#define BERTH_TAKEN_NOT_LOADING 3
+
 typedef enum { false, true } bool;
 
 
 extern struct plane {
     int type;
+    int id;
     float land_time;
     float takeoff_time;
 };
 
 extern struct berth {
     struct plane *plane;
+    int state;
     float time_unoccupied;
     float time_occupied_not_loading;
     float time_loading;

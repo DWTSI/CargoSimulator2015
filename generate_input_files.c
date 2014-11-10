@@ -74,10 +74,10 @@ void test_event_insert() {
 
 /*  Generates the input files, plane_list.dat and storm_list.dat
     The format of each input file is the same:
-    EVENT_TYPE <space> EVENT_TIME
-    EVENT_TYPE <space> EVENT_TIME
+    EVENT_TYPE <space> EVENT_TIME <space> PLANE_ID
+    EVENT_TYPE <space> EVENT_TIME <space> PLANE_ID
     ....
-    EVENT_TYPE <space> EVENT_TIME
+    EVENT_TYPE <space> EVENT_TIME <space> PLANE_ID
     EOF
 */
 void generate_input_files(void) {
@@ -97,13 +97,14 @@ void generate_landing_list(FILE *file, int sim_time) {
     if (sim_time < TIME_LAND_FREQ-TIME_LAND_FREQ_VAR)
         return;
 
-    int time = 0;
+    int time = 0, plane_id=1;
     while (time < sim_time) {
         float prob_distrib[] = {FREQ_PLANE1, FREQ_PLANE2, FREQ_PLANE3};
         int type = random_integer(prob_distrib, STREAM_PLANE_TYPE);
         int r = (int)uniform(TIME_LAND_FREQ-TIME_LAND_FREQ_VAR, TIME_LAND_FREQ+TIME_LAND_FREQ_VAR, STREAM_INTERARRIVAL);
-        fprintf(file, "%d %d\n", type, time + r);
+        fprintf(file, "%d %d %d\n", type, time + r, plane_id);
         time = time + r;
+        plane_id++;
     }
     return;
 }
@@ -111,12 +112,12 @@ void generate_landing_list(FILE *file, int sim_time) {
 void generate_storm_list(FILE *file, int sim_time) {
     int time = 0;
     while (time < sim_time) {
-        int r = (int)expon(TIME_HOUR*TIME_DAY*2, STREAM_STORM_TIME);
+        int r = (int)expon(TIME_DAY*2, STREAM_STORM_TIME);
         time = time + r;
-        fprintf(file, "%d %d\n", EVENT_STORM_START, time);
+        fprintf(file, "%d %d %d\n", EVENT_STORM_START, time, 0);
         int duration = (int)uniform(TIME_STORM_DUR-TIME_STORM_VAR, TIME_STORM_DUR+TIME_STORM_VAR, STREAM_STORM_DURATION);
         time = time + duration;
-        fprintf(file, "%d %d\n", EVENT_STORM_END, time);
+        fprintf(file, "%d %d %d\n", EVENT_STORM_END, time,0);
     }
     return;
 }
@@ -126,9 +127,9 @@ void generate_storm_list(FILE *file, int sim_time) {
     to add all of the events in the input file to simlib's
     event queue.    */
 void schedule_input_list(FILE *file) {
-    int type;
-    float time;
-    while (fscanf(file, "%d %f", &type, &time) != EOF) {
-        event_schedule(time, type);
+    int event_type, event_time, plane_id;
+    while (fscanf(file, "%d %d %d", &event_type, &event_time, &plane_id) != EOF) {
+        transfer[EVENT_PLANE_ID] = plane_id;
+        event_schedule(event_time, event_type);
     }
 }
