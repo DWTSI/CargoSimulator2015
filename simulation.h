@@ -14,7 +14,9 @@
 #define EVENT_DEBERTH       7  /*a plane deberths and takes off*/
 
 /*  The output log shouldn't need to use this event. */
-#define EVENT_BERTH_FINISH  8  /*a berth with a plane finishes loading*/
+#define EVENT_BERTH_FINISH   8  /*a berth with a plane finishes loading*/
+#define EVENT_DEBERTH_FINISH 9  /*plane finishes deberthing and takes off, taxi at runway*/
+#define EVENT_TAXI_RETURNS_IDLE 10 /* taxi returns to the berths */
 
 
 /*  transfer indices for the event log */
@@ -23,6 +25,7 @@
 #define PLANE_ID     4
 #define STORM_STATE  5
 #define BERTH_NUMBER 6
+#define RUNWAY_SIZE  7
 
 
 /*  These define the different states for the taxi.
@@ -113,6 +116,7 @@ extern struct taxi {
 
 extern void generate_input_files(void);
 extern void schedule_input_list(FILE*);
+
 
 
 
