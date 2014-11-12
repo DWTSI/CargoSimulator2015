@@ -14,9 +14,10 @@
 #define EVENT_DEBERTH       7  /*a plane deberths and takes off*/
 
 /*  The output log shouldn't need to use this event. */
-#define EVENT_BERTH_FINISH   8  /*a berth with a plane finishes loading*/
-#define EVENT_DEBERTH_FINISH 9  /*plane finishes deberthing and takes off, taxi at runway*/
-#define EVENT_TAXI_RETURNS_IDLE 10 /* taxi returns to the berths */
+#define EVENT_FINISH_LOADING     8  /*plane finishes loading */
+#define EVENT_BERTH_FINISH       9  /*taxi finishes berthing a plane*/
+#define EVENT_DEBERTH_FINISH    10  /*plane finishes deberthing and takes off, taxi at runway*/
+#define EVENT_TAXI_RETURNS_IDLE 11  /*taxi returns to the berths */
 
 
 /*  transfer indices for the event log */
@@ -48,6 +49,14 @@
 #define FREQ_PLANE1 0.25
 #define FREQ_PLANE2 0.25
 #define FREQ_PLANE3 0.5
+
+/* Loading times for planes. */
+#define TIME_LOAD1     18*TIME_HOUR
+#define TIME_LOAD1_VAR  2*TIME_HOUR
+#define TIME_LOAD2     24*TIME_HOUR
+#define TIME_LOAD2_VAR  4*TIME_HOUR
+#define TIME_LOAD3     36*TIME_HOUR
+#define TIME_LOAD3_VAR  4*TIME_HOUR
 
 #define TIME_LAND_FREQ      TIME_HOUR*11 /*how frequently planes land*/
 #define TIME_LAND_FREQ_VAR  TIME_HOUR*2  /*variation in plane landing frequency*/

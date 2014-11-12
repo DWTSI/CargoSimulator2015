@@ -3,6 +3,7 @@
 *.layout
 *.bak
 *.dat
+*.csv
 
 bin/
 obj/
