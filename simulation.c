@@ -446,7 +446,7 @@ void taxi_idle() {
 
 void taxi_travelling_runway() {
     /*  If a storm starts while the taxi is travelling, make the taxi idle. */
-    if (storm_state = STORM_ON)
+    if (storm_state == STORM_ON)
         taxi_state = TAXI_IDLE;
 }
 
