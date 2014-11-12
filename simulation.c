@@ -84,7 +84,7 @@ int main() {
     fclose(plane_list);
     fclose(storm_list);
 
-    while(list_size[LIST_EVENT] != 0) {
+    while(list_size[LIST_EVENT] != 0  &&  sim_time<TIME_YEAR) {
 
         timing();
 
@@ -377,9 +377,9 @@ void deberth(int berth_number) {
 
 void deberth_finish(int berth_number) {
     int available_berth = check_berths_available();
-    if (list_size[LIST_RUNWAY] == 0 || available_berth == -1) {
+    if (list_size[LIST_RUNWAY] == 0 || (list_size[LIST_RUNWAY] != 0 && available_berth == -1)) {
         /* If the runway queue is empty, then the taxi returns to the runway */
-        taxi_state = TAXI_TRAVELLING_RUNWAY;
+        taxi_state = TAXI_TRAVELLING_BERTHS;
         event_schedule(sim_time+TIME_MINUTE*15, EVENT_TAXI_RETURNS_IDLE);
     }
     else {

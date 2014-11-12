@@ -111,14 +111,20 @@ void generate_landing_list(FILE *file, int sim_time) {
 
 void generate_storm_list(FILE *file, int sim_time) {
     int time = 0;
+
+    FILE *output_csv = fopen("storm_list.csv", "w");
+
     while (time < sim_time) {
         int r = (int)expon(TIME_DAY*2, STREAM_STORM_TIME);
         time = time + r;
         fprintf(file, "%d %d %d\n", EVENT_STORM_START, time, 0);
+        fprintf(output_csv, "Time: %06.1f,,%d\n", (float)time/60, EVENT_STORM_START);
         int duration = (int)uniform(TIME_STORM_DUR-TIME_STORM_VAR, TIME_STORM_DUR+TIME_STORM_VAR, STREAM_STORM_DURATION);
         time = time + duration;
         fprintf(file, "%d %d %d\n", EVENT_STORM_END, time,0);
+        fprintf(output_csv, "Time: %06.1f, Duration: %4.1f, %d\n", (float)time/60, (float)duration/60, EVENT_STORM_END);
     }
+    fclose(output_csv);
     return;
 }
 
