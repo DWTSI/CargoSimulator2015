@@ -414,7 +414,7 @@ void deberth_finish(int berth_number) {
     if (list_size[LIST_RUNWAY] == 0 || (list_size[LIST_RUNWAY] != 0 && available_berth == -1)) {
         /* If the runway queue is empty, then the taxi returns to the runway */
         taxi_state = TAXI_TRAVELLING_BERTHS;
-        event_schedule(sim_time+TIME_HOUR*G.time_taxi_travel, EVENT_TAXI_RETURNS_IDLE);
+        event_schedule(sim_time+G.time_taxi_travel, EVENT_TAXI_RETURNS_IDLE);
     }
     else {
         /* Else the runway queue has planes that can be taken to the berths */
@@ -468,7 +468,7 @@ void taxi_idle() {
     else {
         /* If berths aren't full, schedule an event to start berthing a plane in 15 minutes. */
         transfer[BERTH_NUMBER] = available_berth;
-        event_schedule(sim_time+TIME_HOUR*G.time_taxi_travel, EVENT_BERTH);
+        event_schedule(sim_time+G.time_taxi_travel, EVENT_BERTH);
         taxi_state = TAXI_TRAVELLING_RUNWAY;
     }
 
