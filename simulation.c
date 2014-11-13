@@ -2,32 +2,34 @@
 #include "simulation.h"
 
 char *strings_event[] = {"Null            ",
-                              "Land plane 1    ",
-                              "Land plane 2    ",
-                              "Land plane 3    ",
-                              "Storm starts    ",
-                              "Storm ends      ",
-                              "Berth plane     ",
-                              "Deberth plane   ",
-                              "Loading finished",
-                              "Berth finishes  ",
-                              "Deberth finishes",
-                              "Taxi returns    "};
+                         "Land plane 1    ",
+                         "Land plane 2    ",
+                         "Land plane 3    ",
+                         "Storm starts    ",
+                         "Storm ends      ",
+                         "Berth plane     ",
+                         "Deberth plane   ",
+                         "Loading finished",
+                         "Berth finishes  ",
+                         "Deberth finishes",
+                         "Taxi returns    "};
 
 char *strings_storm[] = {"Off",
-                              "On "};
+                         "On "};
 
 char *strings_taxi[] = {"Idle                ",
-                             "Travelling to runway",
-                             "Travelling to berths",
-                             "Berthing a plane    ",
-                             "Deberthing a plane  "};
+                        "Travelling to runway",
+                        "Travelling to berths",
+                        "Berthing a plane    ",
+                        "Deberthing a plane  "};
 
 
 //struct plane, berth, taxi;
 
 int storm_state, taxi_state;
 struct berth berths[NUMBER_OF_BERTHS];
+
+void load_input_file(FILE *input_file);
 
 void log_event(int time, int event_type, int taxi_state, int plane_id, bool storm, int berth_number);
 void save_log_file(FILE *output_log);
@@ -52,14 +54,13 @@ void taxi_travelling_berths();
 void taxi_berthing();
 void taxi_deberthing();
 
-int main3() {
-    int i;
-    for (i=0; i<100; i++) {
-        printf("%d\n", get_loading_time(2));
-    }
+int main() {
+    FILE *input = fopen("input.in", "r");
+    load_input_file(input);
+    fclose(input);
 }
 
-int main() {
+int main4() {
 
     FILE *plane_list, *storm_list, *output_log;
 
@@ -151,6 +152,36 @@ int main() {
     save_log_file_verbose(output_log);
     fclose(output_log);
 }
+
+
+/* Load the input file into the global variable G */
+void load_input_file(FILE *input_file) {
+    float input_array[17];
+
+    int i=0;
+    while(fscanf(input_file, "%*s %*s %f %*[ \n]", &input_array[i]) != EOF) {
+        i++;
+    }
+
+    G.time_land_freq        = input_array[0];
+    G.time_land_var         = input_array[1];
+    G.time_storm_dur        = input_array[2];
+    G.time_storm_var        = input_array[3];
+    G.time_between_storms   = input_array[4];
+    G.freq_plane1           = (float)input_array[5];
+    G.freq_plane2           = (float)input_array[6];
+    G.freq_plane3           = (float)input_array[7];
+    G.time_load1            = input_array[8];
+    G.time_load1_var        = input_array[9];
+    G.time_load2            = input_array[10];
+    G.time_load2_var        = input_array[11];
+    G.time_load3            = input_array[12];
+    G.time_load3_var        = input_array[13];
+    G.time_taxi_travel      = (float)input_array[14];
+    G.time_berth_deberth    = input_array[15];
+    G.num_berths            = input_array[16];
+}
+
 
 /* log some event into the log list */
 void log_event(int time, int event_type, int taxi_state, int plane_id, bool storm, int berth_number) {

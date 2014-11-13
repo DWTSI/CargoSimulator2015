@@ -11,6 +11,16 @@ void generate_storm_list(FILE*, int);
 void schedule_input_list(FILE*);
 void plane_land(void);
 
+int main3() {
+    /*
+    FILE *input = fopen("input.in", "r");
+    float x;
+    fscanf(input, "%*s %*s %f %*[ \n]", &x);
+    printf("%d\n", (int)x);
+    fclose(input);
+    */
+}
+
 int main2() {
 
     printf("%d\n", TIME_DAY);

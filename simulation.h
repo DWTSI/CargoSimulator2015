@@ -13,7 +13,6 @@
 #define EVENT_BERTH         6  /*a plane berths*/
 #define EVENT_DEBERTH       7  /*a plane deberths and takes off*/
 
-/*  The output log shouldn't need to use this event. */
 #define EVENT_FINISH_LOADING     8  /*plane finishes loading */
 #define EVENT_BERTH_FINISH       9  /*taxi finishes berthing a plane*/
 #define EVENT_DEBERTH_FINISH    10  /*plane finishes deberthing and takes off, taxi at runway*/
@@ -123,10 +122,28 @@ extern struct taxi {
     float time_berthing;
 };
 
+struct global {
+    int time_land_freq;
+    int time_land_var;
+    int time_storm_dur;
+    int time_storm_var;
+    int time_between_storms;
+    float freq_plane1;
+    float freq_plane2;
+    float freq_plane3;
+    int time_load1;
+    int time_load1_var;
+    int time_load2;
+    int time_load2_var;
+    int time_load3;
+    int time_load3_var;
+    float time_taxi_travel;
+    int time_berth_deberth;
+    int num_berths;
+}G;
+
 extern void generate_input_files(void);
 extern void schedule_input_list(FILE*);
-
-
 
 
 #endif // SIMULATION_H
