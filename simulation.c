@@ -168,22 +168,22 @@ void load_input_file(FILE *input_file) {
         i++;
     }
 
-    G.time_land_freq        = input_array[0];
-    G.time_land_var         = input_array[1];
-    G.time_storm_dur        = input_array[2];
-    G.time_storm_var        = input_array[3];
-    G.time_between_storms   = input_array[4];
+    G.time_land_freq        = input_array[0]*TIME_HOUR;
+    G.time_land_var         = input_array[1]*TIME_HOUR;
+    G.time_storm_dur        = input_array[2]*TIME_HOUR;
+    G.time_storm_var        = input_array[3]*TIME_HOUR;
+    G.time_between_storms   = input_array[4]*TIME_HOUR;
     G.freq_plane1           = (float)input_array[5];
     G.freq_plane2           = (float)input_array[6];
     G.freq_plane3           = (float)input_array[7];
-    G.time_load1            = input_array[8];
-    G.time_load1_var        = input_array[9];
-    G.time_load2            = input_array[10];
-    G.time_load2_var        = input_array[11];
-    G.time_load3            = input_array[12];
-    G.time_load3_var        = input_array[13];
-    G.time_taxi_travel      = (float)input_array[14];
-    G.time_berth_deberth    = input_array[15];
+    G.time_load1            = input_array[8]*TIME_HOUR;
+    G.time_load1_var        = input_array[9]*TIME_HOUR;
+    G.time_load2            = input_array[10]*TIME_HOUR;
+    G.time_load2_var        = input_array[11]*TIME_HOUR;
+    G.time_load3            = input_array[12]*TIME_HOUR;
+    G.time_load3_var        = input_array[13]*TIME_HOUR;
+    G.time_taxi_travel      = (float)input_array[14]*TIME_HOUR;
+    G.time_berth_deberth    = input_array[15]*TIME_HOUR;
     G.num_berths            = input_array[16];
 }
 
@@ -206,11 +206,9 @@ void log_event(int time, int event_type, int taxi_state, int plane_id, bool stor
         list_file(INCREASING, LIST_LOG);
     }
 
-    /*
+
     float ftime = (float)time/60;
     char *event = strings_event[event_type];
-    if (event_type == 9)
-        printf("\n%s\n\n", strings_event[9]);
     char *taxi = strings_taxi[taxi_state];
     //int plane_id = transfer[PLANE_ID];
     char *cstorm = strings_storm[storm_state];
@@ -218,7 +216,7 @@ void log_event(int time, int event_type, int taxi_state, int plane_id, bool stor
 
     printf("Time: %06.1f  Event: %s  Taxi: %s  Plane id: %03d   Storm %s   Berth: %d\n",
             ftime, event, taxi, plane_id, cstorm, berth_number);
-            */
+
 
 }
 
