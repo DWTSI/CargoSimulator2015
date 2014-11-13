@@ -54,13 +54,13 @@ void taxi_travelling_berths();
 void taxi_berthing();
 void taxi_deberthing();
 
-int main() {
+int main4() {
     FILE *input = fopen("input.in", "r");
     load_input_file(input);
     fclose(input);
 }
 
-int main4() {
+int main() {
 
     FILE *plane_list, *storm_list, *output_log;
 
@@ -75,13 +75,19 @@ int main4() {
     storm_state = STORM_OFF;
     taxi_state  = TAXI_IDLE;
 
+    /* Load the input paramters for times and such */
+    FILE *input = fopen("input.in", "r");
+    load_input_file(input);
+    fclose(input);
+
+    /* Generate the plane and storm list */
     generate_input_files();
 
+    /* Schedule the plane landing and storm events using the input lists*/
     plane_list = fopen("plane_list.dat", "r");
     storm_list = fopen("storm_list.dat", "r");
     schedule_input_list(plane_list);
     schedule_input_list(storm_list);
-
     fclose(plane_list);
     fclose(storm_list);
 
@@ -118,7 +124,6 @@ int main4() {
                 berth_finish(transfer[BERTH_NUMBER]);
                 break;
             case EVENT_DEBERTH_FINISH:
-                //printf("%d", transfer[BERTH_NUMBER]);
                 deberth_finish(transfer[BERTH_NUMBER]);
                 break;
             case EVENT_TAXI_RETURNS_IDLE:
@@ -256,7 +261,7 @@ void save_log_file_verbose(FILE *output_log) {
     Returns the index of the first available berth otherwise.  */
 int check_berths_available() {
     int i;
-    for (i=0; i<NUMBER_OF_BERTHS; i++) {
+    for (i=0; i<G.num_berths; i++) {
         if (berths[i].plane == NULL)
             return i;
     }
@@ -269,7 +274,7 @@ int check_berths_available() {
     Otherwise, returns the index of the first finished berth.  */
 int check_berths_finished() {
     int i;
-    for (i=0; i<NUMBER_OF_BERTHS; i++) {
+    for (i=0; i<G.num_berths; i++) {
         if (berths[i].state == BERTH_TAKEN_NOT_LOADING)
             return i;
     }
@@ -281,16 +286,16 @@ int get_loading_time(int plane_type) {
     int time = 0, var = 0;
 
     if (plane_type == 1) {
-        time = TIME_LOAD1;
-        var = TIME_LOAD1_VAR;
+        time = G.time_load1;
+        var = G.time_load1_var;
     }
     else if (plane_type == 2) {
-        time = TIME_LOAD2;
-        var = TIME_LOAD2_VAR;
+        time = G.time_load2;
+        var = G.time_load2_var;
     }
     else if (plane_type == 3) {
-        time = TIME_LOAD3;
-        var = TIME_LOAD3_VAR;
+        time = G.time_load3;
+        var = G.time_load3_var;
     }
 
     int load_time = (int)uniform(time-var, time+var, STREAM_LOADING);
@@ -344,7 +349,7 @@ void berth(int berth_number) {
     /* Schedule an event for the berth to finish loading */
     transfer[BERTH_NUMBER] = berth_number;
     transfer[PLANE_ID] = p->id;
-    event_schedule(sim_time+TIME_HOUR, EVENT_BERTH_FINISH);
+    event_schedule(sim_time+G.time_berth_deberth, EVENT_BERTH_FINISH);
     taxi_state = TAXI_BERTHING;
 
     log_event(sim_time, EVENT_BERTH, taxi_state, p->id, storm_state, berth_number+1);
@@ -396,7 +401,7 @@ void deberth(int berth_number) {
 
     transfer[BERTH_NUMBER] = berth_number;
     transfer[PLANE_ID] = p->id;
-    event_schedule(sim_time+TIME_HOUR, EVENT_DEBERTH_FINISH);
+    event_schedule(sim_time+G.time_berth_deberth, EVENT_DEBERTH_FINISH);
     taxi_state = TAXI_DEBERTHING;
 
     log_event(sim_time, EVENT_DEBERTH, taxi_state, p->id, storm_state, berth_number+1);
@@ -411,7 +416,7 @@ void deberth_finish(int berth_number) {
     if (list_size[LIST_RUNWAY] == 0 || (list_size[LIST_RUNWAY] != 0 && available_berth == -1)) {
         /* If the runway queue is empty, then the taxi returns to the runway */
         taxi_state = TAXI_TRAVELLING_BERTHS;
-        event_schedule(sim_time+TIME_MINUTE*15, EVENT_TAXI_RETURNS_IDLE);
+        event_schedule(sim_time+TIME_HOUR*G.time_taxi_travel, EVENT_TAXI_RETURNS_IDLE);
     }
     else {
         /* Else the runway queue has planes that can be taken to the berths */
@@ -447,9 +452,6 @@ void taxi_idle() {
 
     int available_berth = check_berths_available();
 
-    //printf("Available berth: %d\n", available_berth);
-
-
     /* Check if berths are full */
     if (available_berth == -1) {
         /* If berths are full and none are finished, do nothing */
@@ -468,7 +470,7 @@ void taxi_idle() {
     else {
         /* If berths aren't full, schedule an event to start berthing a plane in 15 minutes. */
         transfer[BERTH_NUMBER] = available_berth;
-        event_schedule(sim_time+15, EVENT_BERTH);
+        event_schedule(sim_time+TIME_HOUR*G.time_taxi_travel, EVENT_BERTH);
         taxi_state = TAXI_TRAVELLING_RUNWAY;
     }
 
