@@ -110,9 +110,7 @@ extern struct plane {
 extern struct berth {
     struct plane *plane;
     int state;
-    float time_unoccupied;
-    float time_occupied_not_loading;
-    float time_loading;
+    int time_finish_loading;
 };
 
 extern struct taxi {

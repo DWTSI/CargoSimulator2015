@@ -206,7 +206,7 @@ void log_event(int time, int event_type, int taxi_state, int plane_id, bool stor
         list_file(INCREASING, LIST_LOG);
     }
 
-
+    /*
     float ftime = (float)time/60;
     char *event = strings_event[event_type];
     char *taxi = strings_taxi[taxi_state];
@@ -216,7 +216,7 @@ void log_event(int time, int event_type, int taxi_state, int plane_id, bool stor
 
     printf("Time: %06.1f  Event: %s  Taxi: %s  Plane id: %03d   Storm %s   Berth: %d\n",
             ftime, event, taxi, plane_id, cstorm, berth_number);
-
+    */
 
 }
 
@@ -269,14 +269,18 @@ int check_berths_available() {
 
 /*  Checks to see if any berths have a plane that is finished loading.
     Returns a -1 if no berths have a plane that is finished loading.
-    Otherwise, returns the index of the first finished berth.  */
+    Otherwise, returns the index of berth that finished earliest.  */
 int check_berths_finished() {
-    int i;
+    int i, time_finished = 0, finished_berth = -1;
     for (i=0; i<G.num_berths; i++) {
-        if (berths[i].state == BERTH_TAKEN_NOT_LOADING)
-            return i;
+        if (berths[i].state == BERTH_TAKEN_NOT_LOADING) {
+            if (time_finished < berths[i].time_finish_loading) {
+                time_finished = berths[i].time_finish_loading;
+                finished_berth = i;
+            }
+        }
     }
-    return -1;
+    return finished_berth;
 }
 
 
@@ -376,6 +380,7 @@ void berth_finish(int berth_number) {
 
 void finish_loading(int berth_number) {
     berths[berth_number].state = BERTH_TAKEN_NOT_LOADING;
+    berths[berth_number].time_finish_loading = sim_time;
     struct plane *p = berths[berth_number].plane;
 
     log_event(sim_time, EVENT_FINISH_LOADING, taxi_state, p->id, storm_state, berth_number+1);
@@ -395,7 +400,7 @@ void deberth(int berth_number) {
 
     /* Remove the plane from the berth */
     struct plane *p = berths[berth_number].plane;
-
+    berths[berth_number].time_finish_loading = NULL;
 
     transfer[BERTH_NUMBER] = berth_number;
     transfer[PLANE_ID] = p->id;
