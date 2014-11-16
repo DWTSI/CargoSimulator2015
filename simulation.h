@@ -13,6 +13,19 @@
 #define EVENT_BERTH         6  /*a plane berths*/
 #define EVENT_DEBERTH       7  /*a plane deberths and takes off*/
 
+#define EVENT_FINISH_LOADING     8  /*plane finishes loading */
+#define EVENT_BERTH_FINISH       9  /*taxi finishes berthing a plane*/
+#define EVENT_DEBERTH_FINISH    10  /*plane finishes deberthing and takes off, taxi at runway*/
+#define EVENT_TAXI_RETURNS_IDLE 11  /*taxi returns to the berths */
+
+
+/*  transfer indices for the event log */
+#define PLANE_TYPE   1
+#define TAXI_STATE   3
+#define PLANE_ID     4
+#define STORM_STATE  5
+#define BERTH_NUMBER 6
+#define RUNWAY_SIZE  7
 
 
 /*  These define the different states for the taxi.
@@ -23,13 +36,10 @@
 #define TAXI_BERTHING          3   /* Taxi is berthing a plane */
 #define TAXI_DEBERTHING        4   /* Taxi is deberthing a plane */
 
-/*  not for this simulation, was originally for a simpler
-    test simulation I was going to write to become more
-    familiar with simlib. */
-#define EVENT_REPAIR  9  /*plane is repaired*/
 
 
 /* Time units are in minutes */
+#define TIME_MINUTE    1
 #define TIME_HOUR     60
 #define TIME_DAY    1440
 #define TIME_YEAR 525600
@@ -38,6 +48,14 @@
 #define FREQ_PLANE1 0.25
 #define FREQ_PLANE2 0.25
 #define FREQ_PLANE3 0.5
+
+/* Loading times for planes. */
+#define TIME_LOAD1     18*TIME_HOUR
+#define TIME_LOAD1_VAR  2*TIME_HOUR
+#define TIME_LOAD2     24*TIME_HOUR
+#define TIME_LOAD2_VAR  4*TIME_HOUR
+#define TIME_LOAD3     36*TIME_HOUR
+#define TIME_LOAD3_VAR  4*TIME_HOUR
 
 #define TIME_LAND_FREQ      TIME_HOUR*11 /*how frequently planes land*/
 #define TIME_LAND_FREQ_VAR  TIME_HOUR*2  /*variation in plane landing frequency*/
@@ -73,18 +91,26 @@
 #define STORM_OFF 0
 #define STORM_ON  1
 
+#define NUMBER_OF_BERTHS 3
+#define BERTH_TAKEN 1
+#define BERTH_FREE  0
+#define BERTH_TAKEN_LOADING     2
+#define BERTH_TAKEN_NOT_LOADING 3
+
+typedef enum { false, true } bool;
+
 
 extern struct plane {
     int type;
+    int id;
     float land_time;
     float takeoff_time;
 };
 
 extern struct berth {
     struct plane *plane;
-    float time_unoccupied;
-    float time_occupied_not_loading;
-    float time_loading;
+    int state;
+    int time_finish_loading;
 };
 
 extern struct taxi {
@@ -94,9 +120,28 @@ extern struct taxi {
     float time_berthing;
 };
 
+struct global {
+    int time_land_freq;
+    int time_land_var;
+    int time_storm_dur;
+    int time_storm_var;
+    int time_between_storms;
+    float freq_plane1;
+    float freq_plane2;
+    float freq_plane3;
+    int time_load1;
+    int time_load1_var;
+    int time_load2;
+    int time_load2_var;
+    int time_load3;
+    int time_load3_var;
+    float time_taxi_travel;
+    int time_berth_deberth;
+    int num_berths;
+}G;
+
 extern void generate_input_files(void);
 extern void schedule_input_list(FILE*);
-
 
 
 #endif // SIMULATION_H

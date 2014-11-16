@@ -33,7 +33,8 @@
 
 /* Pre-define attribute numbers of transfer for event list. */
 
-#define EVENT_TIME   1      /* Attribute 1 in event list is event time. */
-#define EVENT_TYPE   2      /* Attribute 2 in event list is event type. */
+#define EVENT_TIME     1    /* Attribute 1 in event list is event time. */
+#define EVENT_TYPE     2    /* Attribute 2 in event list is event type. */
+#define EVENT_PLANE_ID 3    /* Attribute 3 in event list is plane id */
 
 #endif
