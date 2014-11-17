@@ -210,7 +210,7 @@ void load_input_file(FILE *input_file, FILE *verification_log) {
 
     /*  If i is greater than 17, then there is extra data in the
         input file that shouldn't be there */
-    if (i > 17) {
+    if (i > 17 || i < 17) {
         fprintf(verification_log, "config = -1\n");
         printf("Error in loading input file. Check verification.log.\n");
         exit(0);
