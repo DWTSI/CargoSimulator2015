@@ -29,7 +29,10 @@ char *strings_taxi[] = {"Idle                ",
 int storm_state, taxi_state;
 struct berth berths[NUMBER_OF_BERTHS];
 
-void load_input_file(FILE *input_file);
+void load_input_file(FILE *input_file, FILE *verification_log);
+
+void verify_actors(FILE *storm_list, FILE *plane_list, FILE *verification_log);
+void verify_output(FILE *output_log, FILE *verification_log);
 
 void log_event(int time, int event_type, int taxi_state, int plane_id, bool storm, int berth_number);
 void save_log_file(FILE *output_log);
@@ -56,13 +59,18 @@ void taxi_deberthing();
 
 int main4() {
     FILE *input = fopen("input.in", "r");
-    load_input_file(input);
+    //load_input_file(input);
     fclose(input);
 }
 
 int main() {
 
-    FILE *plane_list, *storm_list, *output_log;
+    FILE *plane_list,
+         *storm_list,
+         *output_log_verbose,
+         *output_log,
+         *output_log_read,
+         *verification_log;
 
     init_simlib();
 
@@ -70,14 +78,18 @@ int main() {
     list_rank[LIST_LOG] = EVENT_TIME;
 
     /* Set max attributes in a list to 6, for simlog */
-    maxatr = 7;
+    maxatr = 8;
 
     storm_state = STORM_OFF;
     taxi_state  = TAXI_IDLE;
 
+    /* initialize timest */
+    timest(0.0, 0);
+
     /* Load the input paramters for times and such */
     FILE *input = fopen("input.in", "r");
-    load_input_file(input);
+    verification_log = fopen("verification.log", "w");
+    load_input_file(input, verification_log);
     fclose(input);
 
     /* Generate the plane and storm list */
@@ -91,9 +103,20 @@ int main() {
     fclose(plane_list);
     fclose(storm_list);
 
-    while(list_size[LIST_EVENT] != 0  &&  sim_time<TIME_YEAR) {
+    plane_list = fopen("plane_list.dat", "r");
+    storm_list = fopen("storm_list.dat", "r");
+    verify_actors(storm_list, plane_list, verification_log);
+    fclose(plane_list);
+    fclose(storm_list);
+
+    while(list_size[LIST_EVENT] != 0) {
 
         timing();
+
+        /* If sim time passes a year, exit the simulation. */
+        if ((int)sim_time>=TIME_YEAR) {
+            break;
+        }
 
         //printf("Next event time: %.1f,  Next event type: %d\n", transfer[EVENT_TIME]/60, (int)transfer[EVENT_TYPE]);
 
@@ -153,19 +176,47 @@ int main() {
 
     printf("Log list size: %d\n", list_size[LIST_LOG]);
 
+    //output_log_verbose = fopen("output_log_verbose.csv", "w");
+    //save_log_file_verbose(output_log_verbose);
+    //fclose(output_log_verbose);
+
     output_log = fopen("output_log.csv", "w");
-    save_log_file_verbose(output_log);
+    save_log_file(output_log);
     fclose(output_log);
+
+    output_log = fopen("output_log.csv", "r");
+    verify_output(output_log, verification_log);
+    fclose(output_log);
+    fclose(verification_log);
+
+    /* statistics */
+    timest(0.0, -TIMEST_RUNWAY);
+    //printf("Time-average number of planes in runway: %f\n", transfer[1]);
+
 }
 
 
 /* Load the input file into the global variable G */
-void load_input_file(FILE *input_file) {
+void load_input_file(FILE *input_file, FILE *verification_log) {
     float input_array[17];
 
-    int i=0;
-    while(fscanf(input_file, "%*s %*s %f %*[ \n]", &input_array[i]) != EOF) {
+    printf("Loading input file...\n");
+
+    int i=0, fscanf_return;
+    while((fscanf_return = fscanf(input_file, "%*s %*s %f %*[ \n]", &input_array[i])) != EOF) {
+        //printf("fscanf_return = %d     input_array[%d] = %f\n", fscanf_return, i, input_array[i]);
         i++;
+    }
+
+    /*  If i is greater than 17, then there is extra data in the
+        input file that shouldn't be there */
+    if (i > 17) {
+        fprintf(verification_log, "config = -1\n");
+        printf("Error in loading input file. Check verification.log.\n");
+        exit(0);
+    }
+    else {
+        fprintf(verification_log, "config = 0\n");
     }
 
     G.time_land_freq        = input_array[0]*TIME_HOUR;
@@ -185,6 +236,121 @@ void load_input_file(FILE *input_file) {
     G.time_taxi_travel      = (float)input_array[14]*TIME_HOUR;
     G.time_berth_deberth    = input_array[15]*TIME_HOUR;
     G.num_berths            = input_array[16];
+
+    printf("Input file loaded.\n");
+}
+
+
+void verify_actors(FILE *storm_list, FILE *plane_list, FILE *verification_log) {
+    int time, time_diff, time_prev = 0;
+
+    while (fscanf(plane_list, "%*d %d %*d\n", &time) != EOF) {
+        time_diff = time - time_prev;
+        sampst((float)time_diff, SAMPST_PLANE_LAND);
+        time_prev = time;
+
+    }
+
+    time_prev = 0;
+
+    while (fscanf(storm_list, "%*d %d %*d\n", &time) != EOF) {
+        time_diff = time - time_prev;
+        sampst((float)time_diff, SAMPST_STORM_BETWEEN);
+        time_prev = time;
+
+        fscanf(storm_list, "%*d %d %*d\n", &time);
+        time_diff = time - time_prev;
+        sampst((float)time_diff, SAMPST_STORM_LENGTH);
+        time_prev = time;
+    }
+
+    sampst(0.0, -SAMPST_PLANE_LAND);
+    float plane_avg = transfer[1],
+          plane_max = transfer[3],
+          plane_min = transfer[4];
+
+    /* Check if average landing frequency generated agrees with the specified value */
+    if (plane_avg-TIME_HOUR > G.time_land_freq ||
+        plane_avg+TIME_HOUR < G.time_land_freq)
+    {
+        fprintf(verification_log, "actors = -1\n");
+        printf("The generated average plane landing time does not agree with the specified value.\n");
+        exit(0);
+    }
+
+    /* Check if any plane landing frequencies go outside the specified range. */
+    if (plane_max > G.time_land_freq+G.time_land_var ||
+        plane_min < G.time_land_freq-G.time_land_var)
+    {
+        fprintf(verification_log, "actors = -1\n");
+        printf("The generated plane landing frequencies go out of the specified range.\n");
+        exit(0);
+    }
+
+    sampst(0.0, -SAMPST_STORM_LENGTH);
+    float storm_len_avg = transfer[1],
+          storm_len_max = transfer[3],
+          storm_len_min = transfer[4];
+
+    /* Check if average storm length generated agrees with the specified value */
+    if (storm_len_avg-TIME_HOUR > G.time_storm_dur ||
+        storm_len_avg+TIME_HOUR < G.time_storm_dur)
+    {
+        fprintf(verification_log, "actors = -1\n");
+        printf("The generated average storm length does not agree with the specified value.\n");
+        exit(0);
+    }
+
+    /* Check if any storm lengths go outside the specified range. */
+    if (storm_len_max > G.time_storm_dur+G.time_storm_var ||
+        storm_len_min < G.time_storm_dur-G.time_storm_var)
+    {
+        fprintf(verification_log, "actors = -1\n");
+        printf("The generated storm lengths go out of the specified range.\n");
+        exit(0);
+    }
+
+    sampst(0.0, -SAMPST_STORM_BETWEEN);
+    float storm_btw_avg = transfer[1],
+          storm_btw_max = transfer[3],
+          storm_btw_min = transfer[4];
+
+    /* Check if average storm frequency generated agrees with the specified value */
+    if (storm_btw_avg-TIME_HOUR*4 > G.time_between_storms ||
+        storm_btw_avg+TIME_HOUR*4 < G.time_between_storms)
+    {
+        fprintf(verification_log, "actors = -1\n");
+        printf("The generated average storm frequency does not agree with the specified value.\n");
+        exit(0);
+    }
+
+    fprintf(verification_log, "actors = 0\n");
+
+}
+
+
+void verify_output(FILE *output_log, FILE *verification_log) {
+    int time_start, time_end = 0;
+
+    fscanf(output_log, "%d,%*d,%*d,%*d,%*d,%*d\n", &time_start);
+
+    /* scan through the whole file to retrieve the time of the final event */
+    while (fscanf(output_log, "%d,%*d,%*d,%*d,%*d,%*d\n", &time_end) != EOF) {
+    }
+
+    printf("time_start: %d\ntime_end: %d\n", time_start, time_end);
+
+    if (time_end < time_start ||
+        time_end > TIME_YEAR)
+    {
+        fprintf(verification_log, "sim_completeness = -1\n");
+    }
+    else {
+        fprintf(verification_log, "sim_completeness = 0\n");
+    }
+
+    /* TODO: Verify taxi behavior. */
+    fprintf(verification_log, "taxi_behavior = 0\n");
 }
 
 
@@ -226,9 +392,13 @@ void save_log_file(FILE *output_log) {
     int i, size = list_size[LIST_LOG];
     for (i=0; i<size; i++) {
         list_remove(FIRST, LIST_LOG);
-        fprintf(output_log, "%.1f,%d,%d,%d,%d,%d\n",
-                transfer[1]/60, (int)transfer[2], (int)transfer[3],
-                (int)transfer[4], (int)transfer[5], (int)transfer[6]);
+        fprintf(output_log, "%d,%d,%d,%d,%d,%d\n",
+                (int)transfer[EVENT_TIME],
+                (int)transfer[EVENT_TYPE],
+                (int)transfer[TAXI_STATE],
+                (int)transfer[PLANE_ID],
+                (int)transfer[STORM_STATE],
+                (int)transfer[BERTH_NUMBER]);
     }
 }
 
@@ -311,6 +481,8 @@ int get_loading_time(int plane_type) {
 void plane_land(int plane_type, int plane_id) {
     /* Add the plane in transfer to the runway queue */
     transfer[PLANE_ID] = plane_id;
+    transfer[TIME_LANDED] = sim_time;
+    transfer[EVENT_TYPE] = plane_type;
     list_file(LAST, LIST_RUNWAY);
 
     /* Add the event to the log list */
@@ -345,8 +517,12 @@ void berth(int berth_number) {
     struct plane *p = (struct plane *)malloc(sizeof(struct plane *));
     p->type = (int)transfer[EVENT_TYPE];
     p->id   = (int)transfer[PLANE_ID];
+    //p->time_landed = (int)transfer[TIME_LANDED];
     berths[berth_number].plane = p;
     berths[berth_number].state = BERTH_TAKEN_LOADING;
+
+    /* update time statistics for runway queue */
+    timest((float)sim_time - transfer[TIME_LANDED], TIMEST_RUNWAY);
 
     /* Schedule an event for the berth to finish loading */
     transfer[BERTH_NUMBER] = berth_number;

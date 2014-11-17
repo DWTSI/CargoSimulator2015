@@ -2,8 +2,10 @@
 *.depend
 *.layout
 *.bak
+*.bak2
 *.dat
 *.csv
+*.log
 
 bin/
 obj/

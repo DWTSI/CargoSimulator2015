@@ -26,6 +26,7 @@
 #define STORM_STATE  5
 #define BERTH_NUMBER 6
 #define RUNWAY_SIZE  7
+#define TIME_LANDED  8
 
 
 /*  These define the different states for the taxi.
@@ -58,20 +59,16 @@
 #define TIME_LOAD3_VAR  4*TIME_HOUR
 
 #define TIME_LAND_FREQ      TIME_HOUR*11 /*how frequently planes land*/
-#define TIME_LAND_FREQ_VAR  TIME_HOUR*2  /*variation in plane landing frequency*/
+#define TIME_LAND_FREQ_VAR  TIME_HOUR*7  /*variation in plane landing frequency*/
 #define TIME_STORM_DUR      TIME_HOUR*4  /*average duration of a storm*/
 #define TIME_STORM_VAR      TIME_HOUR*2  /*variation in storm duration*/
 
+#define TIMEST_RUNWAY 1  /* timest variable for runway queue */
+#define SAMPST_PLANE_LAND    2 /* sampst variable for verifying plane landing times */
+#define SAMPST_STORM_LENGTH  3
+#define SAMPST_STORM_BETWEEN 4
 
-/* 	This code is irrelevant to the project.
- 	I was going to write a simpler simulation
- 	to get familiar with simlib, and these
- 	variables were going to be used for that
-	one.  */
-#define TIME_LANDED        TIME_HOUR*10  /*amount of time plane is on ground before taking off*/
-#define TIME_LAND_VAR      TIME_HOUR*2  /*varation in the time plane is landed (plus-or-minus this value)*/
-#define TIME_REPAIR        TIME_HOUR*15  /*amount of time to repair plane*/
-#define TIME_REPAIR_VAR    TIME_HOUR*3  /*varation in the time taken to fix plane (plus-or-minus this value)*/
+
 
 #define STREAM_INTERARRIVAL   1
 #define STREAM_PLANE_TYPE     2
@@ -103,7 +100,7 @@ typedef enum { false, true } bool;
 extern struct plane {
     int type;
     int id;
-    float land_time;
+    float time_landed;
     float takeoff_time;
 };
 
@@ -111,6 +108,7 @@ extern struct berth {
     struct plane *plane;
     int state;
     int time_finish_loading;
+
 };
 
 extern struct taxi {
@@ -139,6 +137,13 @@ struct global {
     int time_berth_deberth;
     int num_berths;
 }G;
+
+struct stats {
+    int taxi_time_idle;
+    int taxi_time_idle_last;
+    int taxi_time_travelling;
+    int taxi_time_berthing_deberthing;
+};
 
 extern void generate_input_files(void);
 extern void schedule_input_list(FILE*);
