@@ -109,6 +109,12 @@ extern struct berth {
     int state;
     int time_finish_loading;
 
+    int time_unoccupied;
+    int time_unoccupied_last;
+    int time_occupied;
+    int time_occupied_last;
+    int time_loading;
+    int time_loading_last;
 };
 
 extern struct taxi {
@@ -138,12 +144,16 @@ struct global {
     int num_berths;
 }G;
 
-struct stats {
+
+/* Time statistics for the taxi states. */
+struct statistics {
     int taxi_time_idle;
     int taxi_time_idle_last;
     int taxi_time_travelling;
+    int taxi_time_travelling_last;
     int taxi_time_berthing_deberthing;
-};
+    int taxi_time_berthing_deberthing_last;
+}stats;
 
 extern void generate_input_files(void);
 extern void schedule_input_list(FILE*);
