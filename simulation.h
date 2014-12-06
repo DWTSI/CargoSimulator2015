@@ -28,6 +28,10 @@
 #define RUNWAY_SIZE  7
 #define TIME_LANDED  8
 
+/*  transfer indices for the in-port residence time list */
+/*  TIME_LANDED and PLANE_ID will be the same as above, for convenience */
+#define TIME_TOOK_OFF 1
+
 
 /*  These define the different states for the taxi.
     These will be stored in a global taxi struct.  */
@@ -82,7 +86,7 @@
 #define LIST_BERTH    3  /* List number for the berths (max size = 3) */
 #define LIST_AVG_PLANES_RUNWAY   4
 #define LIST_AVG_PLANES_DEBERTH  5
-#define LIST_TAXI_TIMES          6
+#define LIST_PLANE_PORT_TIME     6
 #define LIST_LOG  7
 
 #define STORM_OFF 0

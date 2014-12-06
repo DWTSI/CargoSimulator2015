@@ -35,8 +35,11 @@ void verify_actors(FILE *storm_list, FILE *plane_list, FILE *verification_log);
 void verify_output(FILE *output_log, FILE *verification_log);
 void verify_taxi_behavior(FILE *output_log, FILE *verification_log);
 
+float get_stats_in_port_time();
+
 void log_event(int time, int event_type, int taxi_state, int plane_id, bool storm, int berth_number);
 void save_log_file(FILE *output_log);
+void save_log_file_verbose(FILE *output_log);
 
 int check_berths_available();
 int check_berths_finished();
@@ -81,6 +84,9 @@ int main() {
 
     /* Set the log list to be ordered by event time */
     list_rank[LIST_LOG] = EVENT_TIME;
+
+    /* Set the in-port residence time list to be ordered by plane id */
+    list_rank[LIST_PLANE_PORT_TIME] = PLANE_ID;
 
     /* Set max attributes in a list to 6, for simlog */
     maxatr = 8;
@@ -143,10 +149,12 @@ int main() {
             break;
         }
 
+        /*
         printf("%.1f  %.1f  %s  %s\n", sim_time/60,
                                        stats.taxi_time_berthing_deberthing/60.0f,
                                        strings_event[(int)transfer[EVENT_TYPE]],
                                        strings_taxi[taxi_state]);
+                                       */
 
         /* Main event handler switch */
         switch(next_event_type) {
@@ -227,6 +235,10 @@ int main() {
                                                      (float)stats.taxi_time_travelling*100/(sim_length));
     printf("Taxi time berthing/deberthing: %d %f\n", stats.taxi_time_berthing_deberthing,
                                                      (float)stats.taxi_time_berthing_deberthing*100/(sim_length));
+
+    //list_display_plane_times();
+
+    printf("Average in-port residence time: %f\n", get_stats_in_port_time()/60.0f);
 
 }
 
@@ -397,6 +409,28 @@ void verify_taxi_behavior(FILE *output_log, FILE *verification_log) {
 }
 
 
+float get_stats_in_port_time() {
+    int list = LIST_PLANE_PORT_TIME;
+    int i, total, size;
+    size = list_size[list];
+
+    struct master *row = head[list];
+
+    while (row != NULL) {
+        float *value = row->value;
+
+        if (value[TIME_TOOK_OFF] == 0)
+            value[TIME_TOOK_OFF] = TIME_YEAR;
+
+        total += value[TIME_TOOK_OFF] - value[TIME_LANDED];
+
+        row = row->sr;
+    }
+
+    return (float)total/size;
+}
+
+
 /* log some event into the log list */
 void log_event(int time, int event_type, int taxi_state, int plane_id, bool storm, int berth_number) {
     transfer[1] = time;
@@ -450,6 +484,9 @@ void save_log_file_verbose(FILE *output_log) {
     int plane_id, berth_number;
     float time;
     char *event, *taxi, *storm;
+
+    //struct master *row = head[LIST_LOG];
+
     for(i=0; i<size; i++) {
         list_remove(FIRST, LIST_LOG);
         time = transfer[EVENT_TIME]/60;
@@ -460,7 +497,7 @@ void save_log_file_verbose(FILE *output_log) {
         berth_number = transfer[BERTH_NUMBER];
 
         fprintf(output_log,
-                "Time: %06.1f  ,Event: %s  ,Taxi: %s  ,Plane id: %03d   ,Storm %s   ,Berth: %d  ,Runway: %d\n",
+                "%06.1f  ,Event: %s  ,Taxi: %s  ,Plane id: %03d   ,Storm %s   ,Berth: %d  ,Runway: %d\n",
                 time, event, taxi, plane_id, storm, berth_number, (int)transfer[RUNWAY_SIZE]);
     }
 }
@@ -530,6 +567,11 @@ void plane_land(int plane_type, int plane_id) {
 
     /* Add the event to the log list */
     log_event(sim_time, plane_type, taxi_state, plane_id, storm_state, 0);
+
+    /* Add plane to in-port residence time list */
+    transfer[PLANE_ID] = plane_id;
+    transfer[TIME_LANDED] = sim_time;
+    list_file(INCREASING, LIST_PLANE_PORT_TIME);
 }
 
 void storm_start() {
@@ -662,6 +704,17 @@ void deberth_finish(int berth_number) {
 
     struct plane *p = berths[berth_number].plane;
     log_event(sim_time, EVENT_DEBERTH_FINISH, taxi_state, p->id, storm_state, berth_number+1);
+
+    /* Add the plane takeoff time to the in-port residence time list */
+    /*  This adds the attributes PLANE_ID and TIME_LANDED to transfer and deletes the item from the list\
+        This is because you can't edit an item in a list, so I'm deleting the item and re-adding it
+        with the new attribute (TIME_TOOK_OFF) */
+    /*int r = */list_delete(LIST_PLANE_PORT_TIME, p->id, PLANE_ID);
+
+    //printf("r = %d\n", r);
+    transfer[TIME_TOOK_OFF] = sim_time;
+    list_file(INCREASING, LIST_PLANE_PORT_TIME);
+
     berths[berth_number].plane = NULL;
     free(berths[berth_number].plane);
 }
