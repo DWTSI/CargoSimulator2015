@@ -44,6 +44,7 @@ void save_log_file_verbose(FILE *output_log);
 
 int check_berths_available();
 int check_berths_finished();
+int check_num_berths_finished();
 int get_loading_time(int plane_type);
 
 void plane_land(int plane_type, int plane_id);
@@ -91,8 +92,8 @@ int main() {
 
     list_rank[LIST_AVG_PLANES_RUNWAY] = EVENT_TIME;
 
-    /* Set max attributes in a list to 8, for simlog */
-    maxatr = 8;
+    /* Set max attributes in a list to 9, for simlog */
+    maxatr = 9;
 
     storm_state = STORM_OFF;
     taxi_state  = TAXI_IDLE;
@@ -470,6 +471,7 @@ void log_event(int time, int event_type, int taxi_state, int plane_id, bool stor
     transfer[5] = storm;
     transfer[6] = berth_number;
     transfer[7] = list_size[LIST_RUNWAY];
+    transfer[8] = check_num_berths_finished();
 
     /* Add attributes in transfer to log list */
     if (list_size[LIST_LOG] == 0) {
@@ -524,10 +526,11 @@ void save_log_file_verbose(FILE *output_log) {
         taxi = strings_taxi[(int)transfer[TAXI_STATE]];
         plane_id = transfer[PLANE_ID];
         storm = strings_storm[(int)transfer[STORM_STATE]];
+        berth_number = transfer[BERTH_NUMBER];
 
         fprintf(output_log,
-                "Time: %06.1f  ,Event: %s  ,Taxi: %s  ,Plane id: %03d   ,Storm %s   ,Berth: %d  ,Runway: %d\n",
-                time, event, taxi, plane_id, storm, berth_number, (int)transfer[RUNWAY_SIZE]);
+                "Time: %06.1f  ,Event: %s  ,Taxi: %s  ,Plane id: %03d   ,Storm %s   ,Berth: %d  ,Runway: %d  ,Deberthing: %d\n",
+                time, event, taxi, plane_id, storm, berth_number, (int)transfer[RUNWAY_SIZE], (int)transfer[DEBERTH_QUEUE_SIZE]);
     }
 }
 
@@ -560,6 +563,18 @@ int check_berths_finished() {
         }
     }
     return finished_berth;
+}
+
+/*  Checks the number of berths that are finished (which is also
+    the size of the deberthing queue). */
+int check_num_berths_finished() {
+    int i, num_berths_finished = 0;
+    for (i=0; i<G.num_berths; i++) {
+        if (berths[i].state == BERTH_TAKEN_NOT_LOADING)
+            num_berths_finished++;
+    }
+
+    return num_berths_finished;
 }
 
 

@@ -25,7 +25,8 @@
 #define STORM_STATE  5
 #define BERTH_NUMBER 6
 #define RUNWAY_SIZE  7
-#define TIME_LANDED  8
+#define DEBERTH_QUEUE_SIZE 8
+#define TIME_LANDED  9
 
 /*  transfer indices for the in-port residence time list */
 /*  TIME_LANDED and PLANE_ID will be the same as above, for convenience */
