@@ -36,7 +36,7 @@ void verify_output(FILE *output_log, FILE *verification_log);
 void verify_taxi_behavior(FILE *output_log, FILE *verification_log);
 
 float* get_stats_in_port_time();
-float get_stats_runway_queue();
+float get_stats_time_average_num_planes(int list);
 
 void log_event(int time, int event_type, int taxi_state, int plane_id, bool storm, int berth_number);
 void save_log_file(FILE *output_log);
@@ -91,6 +91,7 @@ int main() {
     list_rank[LIST_PLANE_PORT_TIME] = PLANE_ID;
 
     list_rank[LIST_AVG_PLANES_RUNWAY] = EVENT_TIME;
+    list_rank[LIST_AVG_PLANES_DEBERTH] = EVENT_TIME;
 
     /* Set max attributes in a list to 9, for simlog */
     maxatr = 9;
@@ -229,9 +230,7 @@ int main() {
     fclose(output_log);
     fclose(verification_log);
 
-    /* statistics */
-    timest(0.0, -TIMEST_RUNWAY);
-    printf("Time-average number of planes in runway: %f\n", transfer[1]);
+    printf("\n");
 
     printf("Taxi time idle:                %d %f\n", stats.taxi_time_idle,
                                                      (float)stats.taxi_time_idle*100/(sim_length));
@@ -239,6 +238,8 @@ int main() {
                                                      (float)stats.taxi_time_travelling*100/(sim_length));
     printf("Taxi time berthing/deberthing: %d %f\n", stats.taxi_time_berthing_deberthing,
                                                      (float)stats.taxi_time_berthing_deberthing*100/(sim_length));
+
+    printf("\n");
 
     //list_display_plane_times();
 
@@ -250,8 +251,12 @@ int main() {
     printf("Average in-port residence time - plane type 2: %.1f\n", stats_in_port_time[1]/60);
     printf("Average in-port residence time - plane type 3: %.1f\n", stats_in_port_time[2]/60);
 
-    printf("Time-average number of planes in runway queue: %.1f\n", get_stats_runway_queue());
+    printf("\n");
 
+    printf("Time-average number of planes in runway queue: %.1f\n",
+           get_stats_time_average_num_planes(LIST_AVG_PLANES_RUNWAY));
+    printf("Time-average number of planes in deberthing queue: %.1f\n",
+           get_stats_time_average_num_planes(LIST_AVG_PLANES_DEBERTH));
 }
 
 
@@ -457,10 +462,10 @@ float* get_stats_in_port_time() {
     return total;
 }
 
-/* Calculates the time-average number of planes in the runway queue.*/
-float get_stats_runway_queue() {
+/* Calculates the time-average number of planes in the runway queue or deberthing queue.*/
+float get_stats_time_average_num_planes(int list) {
 
-    struct master *row = head[LIST_AVG_PLANES_RUNWAY];
+    struct master *row = head[list];
     int time_last = 0, num_planes_last = 0, total = 0, i = 0;
     float *value;
 
@@ -468,14 +473,14 @@ float get_stats_runway_queue() {
         value = row->value;
         total += num_planes_last*(value[EVENT_TIME] - time_last);
 
-        /* value[2] is the number of planes in the runway queue at that point in time. */
+        /* value[2] is the number of planes in the queue at that point in time. */
         num_planes_last = value[2];
         time_last = value[EVENT_TIME];
 
         row = row->sr;
     }
 
-    return (float)total/(TIME_YEAR/TIME_HOUR);
+    return (float)total/TIME_YEAR;
 }
 
 
@@ -548,7 +553,7 @@ void save_log_file_verbose(FILE *output_log) {
         berth_number = transfer[BERTH_NUMBER];
 
         fprintf(output_log,
-                "Time: %06.1f  ,Event: %s  ,Taxi: %s  ,Plane id: %03d   ,Storm %s   ,Berth: %d  ,Runway: %d  ,Deberthing: %d\n",
+                "%06.1f  ,Event: %s  ,Taxi: %s  ,Plane id: %03d   ,Storm %s   ,Berth: %d  ,Runway: %d  ,%d\n",
                 time, event, taxi, plane_id, storm, berth_number, (int)transfer[RUNWAY_SIZE], (int)transfer[DEBERTH_QUEUE_SIZE]);
     }
 }
@@ -633,7 +638,7 @@ void plane_land(int plane_type, int plane_id) {
 
     /* update time statistics for runway queue */
     timest((float)sim_time - transfer[TIME_LANDED], TIMEST_RUNWAY);
-    transfer[1] = sim_time/60.0f;
+    transfer[1] = sim_time;
     transfer[2] = list_size[LIST_RUNWAY];
     list_file(INCREASING, LIST_AVG_PLANES_RUNWAY);
 
@@ -681,8 +686,8 @@ void berth(int berth_number) {
 
 
     /* update time statistics for runway queue */
-    timest((float)sim_time - transfer[TIME_LANDED], TIMEST_RUNWAY);
-    transfer[1] = sim_time/60.0f;
+    //timest((float)sim_time - transfer[TIME_LANDED], TIMEST_RUNWAY);
+    transfer[1] = sim_time;
     transfer[2] = list_size[LIST_RUNWAY];
     list_file(INCREASING, LIST_AVG_PLANES_RUNWAY);
 
@@ -726,6 +731,10 @@ void finish_loading(int berth_number) {
     berths[berth_number].time_finish_loading = sim_time;
     struct plane *p = berths[berth_number].plane;
 
+    transfer[EVENT_TIME] = sim_time;
+    transfer[2] = check_num_berths_finished();
+    list_file(INCREASING, LIST_AVG_PLANES_DEBERTH);
+
     log_event(sim_time, EVENT_FINISH_LOADING, taxi_state, p->id, storm_state, berth_number+1);
 }
 
@@ -740,6 +749,12 @@ void deberth(int berth_number) {
         printf("Berth number %d cannot deberth a plane at time %d because it is not finished unloading.\n", berth_number, sim_time);
         exit(0);
     }
+
+    berths[berth_number].state = BERTH_FREE;
+    /*  Add times to deberthing queue list to get stats  */
+    transfer[1] = sim_time;
+    transfer[2] = check_num_berths_finished();
+    list_file(INCREASING, LIST_AVG_PLANES_DEBERTH);
 
     /* Remove the plane from the berth */
     struct plane *p = berths[berth_number].plane;
@@ -774,7 +789,7 @@ void deberth_finish(int berth_number) {
         taxi_state = TAXI_BERTHING;
     }
 
-    berths[berth_number].state = BERTH_FREE;
+
 
     stats.taxi_time_berthing_deberthing += (int)sim_time - stats.taxi_time_berthing_deberthing_last;
 
