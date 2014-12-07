@@ -35,6 +35,7 @@ void verify_actors(FILE *storm_list, FILE *plane_list, FILE *verification_log);
 void verify_output(FILE *output_log, FILE *verification_log);
 void verify_taxi_behavior(FILE *output_log, FILE *verification_log);
 
+void generate_statistics(FILE *statistics_log);
 float* get_stats_in_port_time();
 float get_stats_time_average_num_planes(int list);
 
@@ -78,7 +79,8 @@ int main() {
          *output_log_verbose,
          *output_log,
          *output_log_read,
-         *verification_log;
+         *verification_log,
+         *statistics_log;
 
     //int sim_length = TIME_YEAR;
 
@@ -242,37 +244,9 @@ int main() {
     fclose(output_log);
     fclose(verification_log);
 
-    printf("\n");
-
-    for (i=0; i<G.num_berths; i++) {
-        printf("    BERTH %d\n", i);
-
-        printf("Berth unoccupied:               %d %f\n", berths[i].time_unoccupied,
-                                                         (float)berths[i].time_unoccupied*100/(sim_length));
-        printf("Berth occupied and loading:     %d %f\n", berths[i].time_loading,
-                                                         (float)berths[i].time_loading*100/(sim_length));
-        printf("Berth occupied but not loading: %d %f\n", berths[i].time_occupied,
-                                                         (float)berths[i].time_occupied*100/(sim_length));
-    }
-
-    printf("\n");
-
-    //list_display_plane_times();
-
-    //list_display(LIST_AVG_PLANES_RUNWAY, 2);
-
-    float *stats_in_port_time = get_stats_in_port_time();
-
-    printf("Average in-port residence time - plane type 1: %.1f\n", stats_in_port_time[0]/60);
-    printf("Average in-port residence time - plane type 2: %.1f\n", stats_in_port_time[1]/60);
-    printf("Average in-port residence time - plane type 3: %.1f\n", stats_in_port_time[2]/60);
-
-    printf("\n");
-
-    printf("Time-average number of planes in runway queue: %.1f\n",
-           get_stats_time_average_num_planes(LIST_AVG_PLANES_RUNWAY));
-    printf("Time-average number of planes in deberthing queue: %.1f\n",
-           get_stats_time_average_num_planes(LIST_AVG_PLANES_DEBERTH));
+    statistics_log = fopen("statistics.log", "w");
+    generate_statistics(statistics_log);
+    fclose(statistics_log);
 }
 
 
@@ -442,6 +416,72 @@ void verify_taxi_behavior(FILE *output_log, FILE *verification_log) {
 
 }
 
+
+void generate_statistics(FILE *statistics_log) {
+    int i;
+
+    fprintf(statistics_log,
+            "Taxi time idle:                %d %f\n",
+            stats.taxi_time_idle,
+            (float)stats.taxi_time_idle*100/(G.sim_length));
+
+    fprintf(statistics_log,
+            "Taxi time travelling:          %d %f\n",
+            stats.taxi_time_travelling,
+            (float)stats.taxi_time_travelling*100/(G.sim_length));
+
+    fprintf(statistics_log,
+            "Taxi time berthing/deberthing: %d %f\n",
+            stats.taxi_time_berthing_deberthing,
+            (float)stats.taxi_time_berthing_deberthing*100/(G.sim_length));
+
+    fprintf(statistics_log, "\n");
+
+    for (i=0; i<G.num_berths; i++) {
+        fprintf(statistics_log, "    BERTH %d\n", i);
+
+        fprintf(statistics_log,
+                "Berth unoccupied:               %d %f\n",
+                berths[i].time_unoccupied,
+                (float)berths[i].time_unoccupied*100/(G.sim_length));
+
+        fprintf(statistics_log,
+                "Berth occupied and loading:     %d %f\n",
+                berths[i].time_loading,
+                (float)berths[i].time_loading*100/(G.sim_length));
+
+        fprintf(statistics_log,
+                "Berth occupied but not loading: %d %f\n",
+                berths[i].time_occupied,
+                (float)berths[i].time_occupied*100/(G.sim_length));
+    }
+
+    fprintf(statistics_log, "\n");
+
+    float *stats_in_port_time = get_stats_in_port_time();
+
+    fprintf(statistics_log,
+            "Average in-port residence time - plane type 1: %.1f\n",
+            stats_in_port_time[0]/60);
+
+    fprintf(statistics_log,
+            "Average in-port residence time - plane type 2: %.1f\n",
+            stats_in_port_time[1]/60);
+
+    fprintf(statistics_log,
+            "Average in-port residence time - plane type 3: %.1f\n",
+            stats_in_port_time[2]/60);
+
+    fprintf(statistics_log, "\n");
+
+    fprintf(statistics_log,
+            "Time-average number of planes in runway queue: %.1f\n",
+            get_stats_time_average_num_planes(LIST_AVG_PLANES_RUNWAY));
+
+    fprintf(statistics_log,
+            "Time-average number of planes in deberthing queue: %.1f\n",
+            get_stats_time_average_num_planes(LIST_AVG_PLANES_DEBERTH));
+}
 
 float* get_stats_in_port_time() {
     int list = LIST_PLANE_PORT_TIME;
