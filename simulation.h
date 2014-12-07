@@ -147,6 +147,7 @@ struct global {
     float time_taxi_travel;
     int time_berth_deberth;
     int num_berths;
+    int sim_length;
 }G;
 
 

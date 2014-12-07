@@ -80,7 +80,7 @@ int main() {
          *output_log_read,
          *verification_log;
 
-    int sim_length = TIME_YEAR;
+    //int sim_length = TIME_YEAR;
 
     init_simlib();
 
@@ -151,18 +151,18 @@ int main() {
         timing();
 
         /* If sim time passes a year, exit the simulation. */
-        if ((int)sim_time>=sim_length) {//TIME_YEAR) {
+        if ((int)sim_time>=G.sim_length) {//TIME_YEAR) {
             if (taxi_state == TAXI_IDLE)
-                stats.taxi_time_idle += sim_length - stats.taxi_time_idle_last;
+                stats.taxi_time_idle += G.sim_length - stats.taxi_time_idle_last;
             if (taxi_state == TAXI_TRAVELLING_BERTHS || taxi_state == TAXI_TRAVELLING_RUNWAY)
-                stats.taxi_time_travelling += sim_length - stats.taxi_time_travelling_last;
+                stats.taxi_time_travelling += G.sim_length - stats.taxi_time_travelling_last;
             if (taxi_state == TAXI_BERTHING || taxi_state == TAXI_DEBERTHING)
-                stats.taxi_time_berthing_deberthing += sim_length - stats.taxi_time_berthing_deberthing_last;
+                stats.taxi_time_berthing_deberthing += G.sim_length - stats.taxi_time_berthing_deberthing_last;
 
             /*  Because the stats.taxi_time_travelling isn't quite getting all of the time
                 but I know that the idle and berthing/deberthing times are correct,
                 I'm cheating and using those to figure out the travelling time. */
-            stats.taxi_time_travelling = sim_length - stats.taxi_time_idle - stats.taxi_time_berthing_deberthing;
+            stats.taxi_time_travelling = G.sim_length - stats.taxi_time_idle - stats.taxi_time_berthing_deberthing;
             break;
         }
 
@@ -316,6 +316,7 @@ void load_input_file(FILE *input_file, FILE *verification_log) {
     G.time_taxi_travel      = (float)input_array[14]*TIME_HOUR;
     G.time_berth_deberth    = input_array[15]*TIME_HOUR;
     G.num_berths            = NUMBER_OF_BERTHS;//input_array[16];
+    G.sim_length            = TIME_YEAR;
 
     printf("Input file loaded.\n");
 }
