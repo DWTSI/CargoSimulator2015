@@ -628,7 +628,7 @@ void berth_finish(int berth_number) {
 
 void finish_loading(int berth_number) {
     berths[berth_number].state = BERTH_TAKEN_NOT_LOADING;
-    //berths[berth_number].time_finish_loading = sim_time;
+    berths[berth_number].time_finish_loading = sim_time;
 
     /*  Add up the time the berth was loading
         The berth becomes occupied but not loading at this point.  */
