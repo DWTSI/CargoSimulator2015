@@ -20,7 +20,6 @@
 
 
 /*  transfer indices for the event log */
-#define PLANE_TYPE   1
 #define TAXI_STATE   3
 #define PLANE_ID     4
 #define STORM_STATE  5
@@ -31,6 +30,7 @@
 /*  transfer indices for the in-port residence time list */
 /*  TIME_LANDED and PLANE_ID will be the same as above, for convenience */
 #define TIME_TOOK_OFF 1
+#define PLANE_TYPE   2
 
 
 /*  These define the different states for the taxi.

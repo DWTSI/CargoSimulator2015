@@ -36,6 +36,7 @@ void verify_output(FILE *output_log, FILE *verification_log);
 void verify_taxi_behavior(FILE *output_log, FILE *verification_log);
 
 float get_stats_in_port_time();
+float get_stats_runway_queue();
 
 void log_event(int time, int event_type, int taxi_state, int plane_id, bool storm, int berth_number);
 void save_log_file(FILE *output_log);
@@ -88,7 +89,9 @@ int main() {
     /* Set the in-port residence time list to be ordered by plane id */
     list_rank[LIST_PLANE_PORT_TIME] = PLANE_ID;
 
-    /* Set max attributes in a list to 6, for simlog */
+    list_rank[LIST_AVG_PLANES_RUNWAY] = EVENT_TIME;
+
+    /* Set max attributes in a list to 8, for simlog */
     maxatr = 8;
 
     storm_state = STORM_OFF;
@@ -227,7 +230,7 @@ int main() {
 
     /* statistics */
     timest(0.0, -TIMEST_RUNWAY);
-    //printf("Time-average number of planes in runway: %f\n", transfer[1]);
+    printf("Time-average number of planes in runway: %f\n", transfer[1]);
 
     printf("Taxi time idle:                %d %f\n", stats.taxi_time_idle,
                                                      (float)stats.taxi_time_idle*100/(sim_length));
@@ -238,7 +241,11 @@ int main() {
 
     //list_display_plane_times();
 
-    printf("Average in-port residence time: %f\n", get_stats_in_port_time()/60.0f);
+    list_display(LIST_AVG_PLANES_RUNWAY, 2);
+
+    printf("Average in-port residence time: %.1f\n", get_stats_in_port_time()/60.0f);
+
+    printf("Time-average number of planes in runway queue: %.1f\n", get_stats_runway_queue());
 
 }
 
@@ -430,6 +437,29 @@ float get_stats_in_port_time() {
     return (float)total/size;
 }
 
+/* Calculates the time-average number of planes in the runway queue.*/
+float get_stats_runway_queue() {
+
+    struct master *row = head[LIST_AVG_PLANES_RUNWAY];
+    int time_last = 0, num_planes_last = 0, total = 0, i = 0;
+    float *value;
+
+     while (row != NULL) {
+        value = row->value;
+        total += num_planes_last*(value[EVENT_TIME] - time_last);
+
+        /* value[2] is the number of planes in the runway queue at that point in time. */
+        num_planes_last = value[2];
+        time_last = value[EVENT_TIME];
+
+        row = row->sr;
+    }
+
+    return (float)total/(TIME_YEAR/TIME_HOUR);
+}
+
+
+
 
 /* log some event into the log list */
 void log_event(int time, int event_type, int taxi_state, int plane_id, bool storm, int berth_number) {
@@ -489,15 +519,14 @@ void save_log_file_verbose(FILE *output_log) {
 
     for(i=0; i<size; i++) {
         list_remove(FIRST, LIST_LOG);
-        time = transfer[EVENT_TIME]/60;
+        time = transfer[EVENT_TIME];//60;
         event = strings_event[(int)transfer[EVENT_TYPE]];
         taxi = strings_taxi[(int)transfer[TAXI_STATE]];
         plane_id = transfer[PLANE_ID];
         storm = strings_storm[(int)transfer[STORM_STATE]];
-        berth_number = transfer[BERTH_NUMBER];
 
         fprintf(output_log,
-                "%06.1f  ,Event: %s  ,Taxi: %s  ,Plane id: %03d   ,Storm %s   ,Berth: %d  ,Runway: %d\n",
+                "Time: %06.1f  ,Event: %s  ,Taxi: %s  ,Plane id: %03d   ,Storm %s   ,Berth: %d  ,Runway: %d\n",
                 time, event, taxi, plane_id, storm, berth_number, (int)transfer[RUNWAY_SIZE]);
     }
 }
@@ -561,12 +590,18 @@ int get_loading_time(int plane_type) {
 void plane_land(int plane_type, int plane_id) {
     /* Add the plane in transfer to the runway queue */
     transfer[PLANE_ID] = plane_id;
-    transfer[TIME_LANDED] = sim_time;
+    transfer[TIME_LANDED] = sim_time/60;
     transfer[EVENT_TYPE] = plane_type;
     list_file(LAST, LIST_RUNWAY);
 
     /* Add the event to the log list */
     log_event(sim_time, plane_type, taxi_state, plane_id, storm_state, 0);
+
+    /* update time statistics for runway queue */
+    timest((float)sim_time - transfer[TIME_LANDED], TIMEST_RUNWAY);
+    transfer[1] = sim_time/60.0f;
+    transfer[2] = list_size[LIST_RUNWAY];
+    list_file(INCREASING, LIST_AVG_PLANES_RUNWAY);
 
     /* Add plane to in-port residence time list */
     transfer[PLANE_ID] = plane_id;
@@ -609,8 +644,12 @@ void berth(int berth_number) {
     berths[berth_number].plane = p;
     berths[berth_number].state = BERTH_TAKEN_LOADING;
 
+
     /* update time statistics for runway queue */
     timest((float)sim_time - transfer[TIME_LANDED], TIMEST_RUNWAY);
+    transfer[1] = sim_time/60.0f;
+    transfer[2] = list_size[LIST_RUNWAY];
+    list_file(INCREASING, LIST_AVG_PLANES_RUNWAY);
 
     /* Schedule an event for the berth to finish loading */
     transfer[BERTH_NUMBER] = berth_number;
@@ -699,6 +738,8 @@ void deberth_finish(int berth_number) {
         event_schedule(sim_time, EVENT_BERTH);
         taxi_state = TAXI_BERTHING;
     }
+
+    berths[berth_number].state = BERTH_FREE;
 
     stats.taxi_time_berthing_deberthing += (int)sim_time - stats.taxi_time_berthing_deberthing_last;
 
