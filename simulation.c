@@ -35,7 +35,7 @@ void verify_actors(FILE *storm_list, FILE *plane_list, FILE *verification_log);
 void verify_output(FILE *output_log, FILE *verification_log);
 void verify_taxi_behavior(FILE *output_log, FILE *verification_log);
 
-float get_stats_in_port_time();
+float* get_stats_in_port_time();
 float get_stats_runway_queue();
 
 void log_event(int time, int event_type, int taxi_state, int plane_id, bool storm, int berth_number);
@@ -242,9 +242,13 @@ int main() {
 
     //list_display_plane_times();
 
-    list_display(LIST_AVG_PLANES_RUNWAY, 2);
+    //list_display(LIST_AVG_PLANES_RUNWAY, 2);
 
-    printf("Average in-port residence time: %.1f\n", get_stats_in_port_time()/60.0f);
+    float *stats_in_port_time = get_stats_in_port_time();
+
+    printf("Average in-port residence time - plane type 1: %.1f\n", stats_in_port_time[0]/60);
+    printf("Average in-port residence time - plane type 2: %.1f\n", stats_in_port_time[1]/60);
+    printf("Average in-port residence time - plane type 3: %.1f\n", stats_in_port_time[2]/60);
 
     printf("Time-average number of planes in runway queue: %.1f\n", get_stats_runway_queue());
 
@@ -417,12 +421,19 @@ void verify_taxi_behavior(FILE *output_log, FILE *verification_log) {
 }
 
 
-float get_stats_in_port_time() {
+float* get_stats_in_port_time() {
     int list = LIST_PLANE_PORT_TIME;
-    int i, total, size;
-    size = list_size[list];
+    int i, plane_type, num_planes[3];
+    static float total[3];
+    //size = list_size[list];
 
     struct master *row = head[list];
+
+    /*  Initialize all elements in total to zero */
+    for (i=0; i<3; i++) {
+        total[i] = 0;
+        num_planes[i] = 0;
+    }
 
     while (row != NULL) {
         float *value = row->value;
@@ -430,12 +441,20 @@ float get_stats_in_port_time() {
         if (value[TIME_TOOK_OFF] == 0)
             value[TIME_TOOK_OFF] = TIME_YEAR;
 
-        total += value[TIME_TOOK_OFF] - value[TIME_LANDED];
+        plane_type = value[PLANE_TYPE]-1;
+
+        total[plane_type] += value[TIME_TOOK_OFF] - value[TIME_LANDED];
+
+        num_planes[plane_type]++;
 
         row = row->sr;
     }
 
-    return (float)total/size;
+    for (i=0; i<3; i++) {
+        total[i] = total[i]/num_planes[i];
+    }
+
+    return total;
 }
 
 /* Calculates the time-average number of planes in the runway queue.*/
@@ -621,6 +640,7 @@ void plane_land(int plane_type, int plane_id) {
     /* Add plane to in-port residence time list */
     transfer[PLANE_ID] = plane_id;
     transfer[TIME_LANDED] = sim_time;
+    transfer[PLANE_TYPE] = plane_type;
     list_file(INCREASING, LIST_PLANE_PORT_TIME);
 }
 
