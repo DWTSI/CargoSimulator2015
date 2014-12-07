@@ -421,38 +421,37 @@ void generate_statistics(FILE *statistics_log) {
     int i;
 
     fprintf(statistics_log,
-            "Taxi time idle:                %d %f\n",
-            stats.taxi_time_idle,
+            "Percentage of time the taxi is:\n");
+
+    fprintf(statistics_log,
+            "    idle:                     %04.1f%%\n",
             (float)stats.taxi_time_idle*100/(G.sim_length));
 
     fprintf(statistics_log,
-            "Taxi time travelling:          %d %f\n",
-            stats.taxi_time_travelling,
+            "    travelling:               %04.1f%%\n",
             (float)stats.taxi_time_travelling*100/(G.sim_length));
 
     fprintf(statistics_log,
-            "Taxi time berthing/deberthing: %d %f\n",
-            stats.taxi_time_berthing_deberthing,
+            "    berthing/deberthing:      %04.1f%%\n",
             (float)stats.taxi_time_berthing_deberthing*100/(G.sim_length));
 
     fprintf(statistics_log, "\n");
 
+    fprintf(statistics_log, "Percentage of time each berth is:\n");
+
     for (i=0; i<G.num_berths; i++) {
-        fprintf(statistics_log, "    BERTH %d\n", i);
+        fprintf(statistics_log, "  BERTH %d\n", i+1);
 
         fprintf(statistics_log,
-                "Berth unoccupied:               %d %f\n",
-                berths[i].time_unoccupied,
+                "    unoccupied:               %04.1f%%\n",
                 (float)berths[i].time_unoccupied*100/(G.sim_length));
 
         fprintf(statistics_log,
-                "Berth occupied and loading:     %d %f\n",
-                berths[i].time_loading,
+                "    occupied and loading:     %04.1f%%\n",
                 (float)berths[i].time_loading*100/(G.sim_length));
 
         fprintf(statistics_log,
-                "Berth occupied but not loading: %d %f\n",
-                berths[i].time_occupied,
+                "    occupied but not loading: %04.1f%%\n",
                 (float)berths[i].time_occupied*100/(G.sim_length));
     }
 
@@ -461,25 +460,31 @@ void generate_statistics(FILE *statistics_log) {
     float *stats_in_port_time = get_stats_in_port_time();
 
     fprintf(statistics_log,
-            "Average in-port residence time - plane type 1: %.1f\n",
+            "Average in-port residence time:\n");
+
+    fprintf(statistics_log,
+            "    plane type 1:     %.1f hours\n",
             stats_in_port_time[0]/60);
 
     fprintf(statistics_log,
-            "Average in-port residence time - plane type 2: %.1f\n",
+            "    plane type 2:     %.1f hours\n",
             stats_in_port_time[1]/60);
 
     fprintf(statistics_log,
-            "Average in-port residence time - plane type 3: %.1f\n",
+            "    plane type 3:     %.1f hours\n",
             stats_in_port_time[2]/60);
 
     fprintf(statistics_log, "\n");
 
     fprintf(statistics_log,
-            "Time-average number of planes in runway queue: %.1f\n",
+            "Time-average number of planes in:\n");
+
+    fprintf(statistics_log,
+            "    runway queue:     %.1f\n",
             get_stats_time_average_num_planes(LIST_AVG_PLANES_RUNWAY));
 
     fprintf(statistics_log,
-            "Time-average number of planes in deberthing queue: %.1f\n",
+            "    deberthing queue: %.1f\n",
             get_stats_time_average_num_planes(LIST_AVG_PLANES_DEBERTH));
 }
 
