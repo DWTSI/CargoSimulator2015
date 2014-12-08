@@ -45,6 +45,7 @@ public class CargoSimUI extends JFrame {
 	private JTextPane txtpnBerthingQueue3;
 	private JTextPane txtpnDeberthingQueueOverflow;
 	private JTextPane txtpnBerthingQueueOverflow;
+	private JTextPane txtpnIsStorming;
 	
 	
 	// globals
@@ -65,7 +66,7 @@ public class CargoSimUI extends JFrame {
 	final int TAXI_TRAVELLING_TO_BERTHS = 2;
 	final int TAXI_BERTHING_PLANE = 3;
 	final int TAXI_DEBERTHING_PLANE = 4;
-	final long ANIMATION_THREAD_DELAY = 10; 
+	final long ANIMATION_THREAD_DELAY = 1; 
 	final int MAX_TIME = 525599;
 	
 	/*########### Nested Classes ###########*/
@@ -110,7 +111,7 @@ public class CargoSimUI extends JFrame {
 			for(int i = 0; !isCancelled() && i < MAX_TIME; i++){
 				int eventTime = Integer.parseInt(currentEvent[0]);
 				t++;
-				System.out.println("Time: " + t);
+				//System.out.println("Time: " + t);
 				if(t == eventTime) {
 					handleEvent(currentEvent);
 					
@@ -300,12 +301,17 @@ public class CargoSimUI extends JFrame {
 		panelTaxiStatus.add(txtpnTaxiStatus);
 		
 		JPanel panelAnimation = new JPanel();
-		panelAnimation.setBounds(6, 452, 441, 94);
+		panelAnimation.setBounds(6, 480, 441, 66);
 		contentPane.add(panelAnimation);
 		
 		JTextArea txtrFancyAnimationGoes = new JTextArea();
 		txtrFancyAnimationGoes.setText("ANIMATION PANEL");
 		panelAnimation.add(txtrFancyAnimationGoes);
+		
+		JTextPane txtpnIsStorming = new JTextPane();
+		txtpnIsStorming.setText("Storm : off");
+		txtpnIsStorming.setBounds(6, 444, 441, 30);
+		contentPane.add(txtpnIsStorming);
 		
 		try{
 			loadEvents();
@@ -313,8 +319,10 @@ public class CargoSimUI extends JFrame {
 			System.out.println(e.getMessage());
 		}
 		
+		// initialize globals
 		deberthingQueue = new LinkedList<Plane>();
 		berthingQueue = new LinkedList<Plane>();
+		isStorming = false;
 	}
 	
 	/**
@@ -376,6 +384,7 @@ public class CargoSimUI extends JFrame {
 			}
 			// deberth it
 			deberthingQueue.remove(p);
+			System.out.println("Removed plane from deberthing queue: " + p.getId());
 			// update taxi status
 			taxiStatus = currentTaxiStatus;
 		}
@@ -421,6 +430,9 @@ public class CargoSimUI extends JFrame {
 		JTextPane[] deberthingQueueTextPanes = {txtpnDeberthingQueue1, txtpnDeberthingQueue2, txtpnDeberthingQueue3};
 		
 		// draw deberthing queue
+		for(JTextPane tp : deberthingQueueTextPanes) {
+			tp.setText("");
+		}
 		for(Plane p : deberthingQueue) {
 			if(p.berthNumber == 1)
 				txtpnDeberthingQueue1.setText(p.getInfo());
@@ -430,7 +442,10 @@ public class CargoSimUI extends JFrame {
 				txtpnDeberthingQueue3.setText(p.getInfo());
 		}
 		
-		// draw berthing queue
+//		 draw berthing queue
+		for(JTextPane tp : berthingQueueTextPanes) {
+			tp.setText("");
+		}
 		if(berthingQueue.size() >= 3) {
 			txtpnBerthingQueue1.setText(berthingQueue.get(0).getInfo());
 			txtpnBerthingQueue2.setText(berthingQueue.get(1).getInfo());
@@ -452,8 +467,13 @@ public class CargoSimUI extends JFrame {
 		
 		// draw taxi status
 		
+		// draw storm status
+//		try{
+//			txtpnIsStorming.setText("Storming : " + isStorming);
+//		} catch (Exception ee) {
+//			System.out.println(ee.getMessage());
+//		}
 		
+		this.txtfldCurrentHour.setText("" + (t/60.0f));
 	}
-
-	
 }
