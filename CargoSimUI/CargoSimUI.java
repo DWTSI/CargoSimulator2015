@@ -45,6 +45,7 @@ public class CargoSimUI extends JFrame {
 	private JTextPane txtpnBerthingQueue3;
 	private JTextPane txtpnDeberthingQueueOverflow;
 	private JTextPane txtpnBerthingQueueOverflow;
+	private JTextPane txtpnIsStorming;
 	
 	
 	// globals
@@ -57,7 +58,7 @@ public class CargoSimUI extends JFrame {
 	private int t; 	// time in minutes
 	private SwingWorker currentThread;
 	
-	
+	  
 	// constants
 	final String SIMULATION_LOG_NAME = "output_log.csv";
 	final int TAXI_IDLE = 0;
@@ -110,8 +111,10 @@ public class CargoSimUI extends JFrame {
 			for(int i = 0; !isCancelled() && i < MAX_TIME; i++){
 				int eventTime = Integer.parseInt(currentEvent[0]);
 				t++;
+				//System.out.println("Time: " + t);
 				if(t == eventTime) {
 					handleEvent(currentEvent);
+					
 					if(events.indexOf(currentEvent) < events.size() - 1)
 						currentEvent = events.get(events.indexOf(currentEvent) + 1);
 				}
@@ -218,6 +221,25 @@ public class CargoSimUI extends JFrame {
 		panelTimeControl.add(lblCurrentHour);
 		
 		JButton btnStop = new JButton("STOP");
+		btnStop.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				Plane p1 = new Plane("1","1");
+				Plane p2 = new Plane("2","2");
+				Plane p3 = new Plane("3","3");
+				p1.setBerthNumber("1");
+				p2.setBerthNumber("2");
+				p3.setBerthNumber("3");
+				deberthingQueue.add(p1);
+				deberthingQueue.add(p2);
+				//deberthingQueue.add(p3);
+				
+				try{
+					draw();
+				} catch(Exception eeee) {
+					System.out.println(eeee.getMessage());
+				}
+			}
+		});
 		btnStop.setBounds(6, 62, 117, 29);
 		panelTimeControl.add(btnStop);
 		
@@ -279,18 +301,28 @@ public class CargoSimUI extends JFrame {
 		panelTaxiStatus.add(txtpnTaxiStatus);
 		
 		JPanel panelAnimation = new JPanel();
-		panelAnimation.setBounds(6, 452, 441, 94);
+		panelAnimation.setBounds(6, 480, 441, 66);
 		contentPane.add(panelAnimation);
 		
 		JTextArea txtrFancyAnimationGoes = new JTextArea();
 		txtrFancyAnimationGoes.setText("ANIMATION PANEL");
 		panelAnimation.add(txtrFancyAnimationGoes);
 		
+		JTextPane txtpnIsStorming = new JTextPane();
+		txtpnIsStorming.setText("Storm : off");
+		txtpnIsStorming.setBounds(6, 444, 441, 30);
+		contentPane.add(txtpnIsStorming);
+		
 		try{
 			loadEvents();
 		} catch(Exception e) {
 			System.out.println(e.getMessage());
 		}
+		
+		// initialize globals
+		deberthingQueue = new LinkedList<Plane>();
+		berthingQueue = new LinkedList<Plane>();
+		isStorming = false;
 	}
 	
 	/**
@@ -352,6 +384,7 @@ public class CargoSimUI extends JFrame {
 			}
 			// deberth it
 			deberthingQueue.remove(p);
+			System.out.println("Removed plane from deberthing queue: " + p.getId());
 			// update taxi status
 			taxiStatus = currentTaxiStatus;
 		}
@@ -397,6 +430,9 @@ public class CargoSimUI extends JFrame {
 		JTextPane[] deberthingQueueTextPanes = {txtpnDeberthingQueue1, txtpnDeberthingQueue2, txtpnDeberthingQueue3};
 		
 		// draw deberthing queue
+		for(JTextPane tp : deberthingQueueTextPanes) {
+			tp.setText("");
+		}
 		for(Plane p : deberthingQueue) {
 			if(p.berthNumber == 1)
 				txtpnDeberthingQueue1.setText(p.getInfo());
@@ -406,8 +442,11 @@ public class CargoSimUI extends JFrame {
 				txtpnDeberthingQueue3.setText(p.getInfo());
 		}
 		
-		// draw berthing queue
-		if(deberthingQueue.size() >= 3) {
+//		 draw berthing queue
+		for(JTextPane tp : berthingQueueTextPanes) {
+			tp.setText("");
+		}
+		if(berthingQueue.size() >= 3) {
 			txtpnBerthingQueue1.setText(berthingQueue.get(0).getInfo());
 			txtpnBerthingQueue2.setText(berthingQueue.get(1).getInfo());
 			txtpnBerthingQueue3.setText(berthingQueue.get(2).getInfo());
@@ -420,6 +459,7 @@ public class CargoSimUI extends JFrame {
 			}
 			while(i < berthingQueueTextPanes.length) {
 				berthingQueueTextPanes[i].setText("");
+				i++;
 			}
 		}
 		
@@ -427,8 +467,13 @@ public class CargoSimUI extends JFrame {
 		
 		// draw taxi status
 		
+		// draw storm status
+//		try{
+//			txtpnIsStorming.setText("Storming : " + isStorming);
+//		} catch (Exception ee) {
+//			System.out.println(ee.getMessage());
+//		}
 		
+		this.txtfldCurrentHour.setText("" + (t/60.0f));
 	}
-
-	
 }
