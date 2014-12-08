@@ -1,5 +1,6 @@
 import java.awt.BorderLayout;
 import java.awt.EventQueue;
+import java.awt.List;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -11,18 +12,125 @@ import javax.swing.JTextArea;
 import javax.swing.JButton;
 import javax.swing.JTextField;
 import javax.swing.JLabel;
+import javax.swing.SwingWorker;
+
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.Reader;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.LinkedList;
+import java.util.Queue;
+
 import javax.swing.event.ChangeListener;
 import javax.swing.event.ChangeEvent;
 
+import java.awt.Color;
+
 
 public class CargoSimUI extends JFrame {
-
+	
+	// GUI globals
 	private JPanel contentPane;
 	private JTextField txtfldAnimationRate;
 	private JTextField txtfldCurrentHour;
+	private JTextPane txtpnDeberthingQueue1;
+	private JTextPane txtpnDeberthingQueue2;
+	private JTextPane txtpnDeberthingQueue3;
+	private JTextPane txtpnBerthingQueue1;
+	private JTextPane txtpnBerthingQueue2;
+	private JTextPane txtpnBerthingQueue3;
+	private JTextPane txtpnDeberthingQueueOverflow;
+	private JTextPane txtpnBerthingQueueOverflow;
+	
+	
+	// globals
+	private LinkedList<String[]> events;
+	String[] currentEvent;
+	private LinkedList<Plane> deberthingQueue;
+	private LinkedList<Plane> berthingQueue;
+	private boolean isStorming;
+	private int taxiStatus;
+	private int t; 	// time in minutes
+	private SwingWorker currentThread;
+	
+	
+	// constants
+	final String SIMULATION_LOG_NAME = "output_log.csv";
+	final int TAXI_IDLE = 0;
+	final int TAXI_TRAVELING_TO_RUNWAY = 1;
+	final int TAXI_TRAVELLING_TO_BERTHS = 2;
+	final int TAXI_BERTHING_PLANE = 3;
+	final int TAXI_DEBERTHING_PLANE = 4;
+	final long ANIMATION_THREAD_DELAY = 1; 
+	final int MAX_TIME = 525599;
+	
+	/*########### Nested Classes ###########*/
+	
+	private class Plane {
+	    private int type;
+	    private int id;
+	    private int berthNumber;
+	    private boolean isLoading;
+	    
+	    public int getType(){ return this.type; }
+	    public int getId(){ return this.id; }
+	    public void setBerthNumber(String b){ this.berthNumber = Integer.parseInt(b); }
+	    public void setLoading(boolean l){ this.isLoading = l; }
+	    
+	    public Plane(int type, int id){
+	    	this.type = type;
+	    	this.id = id;
+	    	this.berthNumber = 0;
+	    	this.isLoading = false;
+	    }
+	    
+	    public Plane(String type, String id){
+	    	this.type = Integer.parseInt(type);
+	    	this.id = Integer.parseInt(id);
+	    }
+	    
+	    // returns a formatted string to be displayed in UI text panels
+	    public String getInfo() {
+	    	String r = "";
+	    	r += "Plane ID: " + id + "\n";
+	    	r += "Plane Type: " + type + "\n";
+	    	r += "Plane loading:" + isLoading + "\n";
+	    	return r;
+	    }
+	}
+	
+	private class AnimationThread extends SwingWorker<Void, Void>{
 
+		@Override
+		protected Void doInBackground() throws Exception {
+			for(int i = 0; !isCancelled() && i < MAX_TIME; i++){
+				int eventTime = Integer.parseInt(currentEvent[0]);
+				t++;
+				if(t == eventTime) {
+					handleEvent(currentEvent);
+					if(events.indexOf(currentEvent) < events.size() - 1)
+						currentEvent = events.get(events.indexOf(currentEvent) + 1);
+				}
+				
+				publish();
+				draw();
+				Thread.sleep(ANIMATION_THREAD_DELAY);
+			}
+			return null;
+		}
+		
+		protected void process() throws Exception {
+			draw();
+		}
+	}
+	
+	/*########### End Nested Classes ###########*/
+
+	
 	/**
 	 * Launch the application.
 	 */
@@ -30,8 +138,8 @@ public class CargoSimUI extends JFrame {
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
-					CargoSimUI frame = new CargoSimUI();
-					frame.setVisible(true);
+					CargoSimUI c = new CargoSimUI();
+					c.setVisible(true);
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -43,6 +151,7 @@ public class CargoSimUI extends JFrame {
 	 * Create the frame.
 	 */
 	public CargoSimUI() {
+		setTitle("CargoSimulator2015");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 453, 574);
 		contentPane = new JPanel();
@@ -80,15 +189,24 @@ public class CargoSimUI extends JFrame {
 		panelTimeControl.add(slider);
 		
 		JButton btnPlay = new JButton("PLAY");
-		btnPlay.setBounds(6, 62, 117, 29);
+		btnPlay.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				t = 0;		// reset time
+				currentEvent = events.getFirst();
+				
+				(currentThread = new AnimationThread()).execute();
+			}
+		});
+		btnPlay.setBounds(6, 33, 117, 29);
 		panelTimeControl.add(btnPlay);
 		
 		JButton btnPause = new JButton("PAUSE");
 		btnPause.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
+				currentThread.cancel(true);
 			}
 		});
-		btnPause.setBounds(6, 33, 117, 29);
+		btnPause.setBounds(6, 6, 117, 29);
 		panelTimeControl.add(btnPause);
 		
 		JLabel lblAnimationRate = new JLabel("Animation Rate");
@@ -99,40 +217,56 @@ public class CargoSimUI extends JFrame {
 		lblCurrentHour.setBounds(281, 18, 98, 16);
 		panelTimeControl.add(lblCurrentHour);
 		
+		JButton btnStop = new JButton("STOP");
+		btnStop.setBounds(6, 62, 117, 29);
+		panelTimeControl.add(btnStop);
+		
 		JPanel panelQueueStatus = new JPanel();
-		panelQueueStatus.setBounds(6, 115, 441, 240);
+		panelQueueStatus.setBounds(6, 115, 441, 247);
 		contentPane.add(panelQueueStatus);
 		panelQueueStatus.setLayout(null);
 		
-		JTextPane txtpnDeberthingQueue1 = new JTextPane();
+		txtpnDeberthingQueue1 = new JTextPane();
+		txtpnDeberthingQueue1.setBackground(new Color(255, 255, 255));
+		txtpnDeberthingQueue1.setForeground(Color.BLACK);
 		txtpnDeberthingQueue1.setText("DEBERTHING QUEUE 1");
 		txtpnDeberthingQueue1.setBounds(6, 30, 204, 60);
 		panelQueueStatus.add(txtpnDeberthingQueue1);
 		
-		JTextPane txtpnDeberthingQueue2 = new JTextPane();
+		txtpnDeberthingQueue2 = new JTextPane();
 		txtpnDeberthingQueue2.setText("DEBERTHING QUEUE 2");
 		txtpnDeberthingQueue2.setBounds(6, 94, 204, 60);
 		panelQueueStatus.add(txtpnDeberthingQueue2);
 		
-		JTextPane txtpnDeberthingQueue3 = new JTextPane();
+		txtpnDeberthingQueue3 = new JTextPane();
 		txtpnDeberthingQueue3.setText("DEBERTHING QUEUE 3");
 		txtpnDeberthingQueue3.setBounds(6, 158, 204, 60);
 		panelQueueStatus.add(txtpnDeberthingQueue3);
 		
-		JTextPane txtpnRunwayQueue1 = new JTextPane();
-		txtpnRunwayQueue1.setText("RUNWAY QUEUE 1");
-		txtpnRunwayQueue1.setBounds(222, 30, 204, 60);
-		panelQueueStatus.add(txtpnRunwayQueue1);
+		txtpnBerthingQueue1 = new JTextPane();
+		txtpnBerthingQueue1.setText("RUNWAY QUEUE 1");
+		txtpnBerthingQueue1.setBounds(222, 30, 204, 60);
+		panelQueueStatus.add(txtpnBerthingQueue1);
 		
-		JTextPane txtpnRunwayQueue2 = new JTextPane();
-		txtpnRunwayQueue2.setText("RUNWAY QUEUE 2");
-		txtpnRunwayQueue2.setBounds(222, 94, 204, 60);
-		panelQueueStatus.add(txtpnRunwayQueue2);
+		txtpnBerthingQueue2 = new JTextPane();
+		txtpnBerthingQueue2.setText("RUNWAY QUEUE 2");
+		txtpnBerthingQueue2.setBounds(222, 94, 204, 60);
+		panelQueueStatus.add(txtpnBerthingQueue2);
 		
-		JTextPane txtpnRunwayQueue3 = new JTextPane();
-		txtpnRunwayQueue3.setText("RUNWAY QUEUE 3");
-		txtpnRunwayQueue3.setBounds(222, 158, 204, 60);
-		panelQueueStatus.add(txtpnRunwayQueue3);
+		txtpnBerthingQueue3 = new JTextPane();
+		txtpnBerthingQueue3.setText("RUNWAY QUEUE 3");
+		txtpnBerthingQueue3.setBounds(222, 158, 204, 60);
+		panelQueueStatus.add(txtpnBerthingQueue3);
+		
+		txtpnDeberthingQueueOverflow = new JTextPane();
+		txtpnDeberthingQueueOverflow.setText("X more in queue");
+		txtpnDeberthingQueueOverflow.setBounds(6, 225, 204, 16);
+		panelQueueStatus.add(txtpnDeberthingQueueOverflow);
+		
+		txtpnBerthingQueueOverflow = new JTextPane();
+		txtpnBerthingQueueOverflow.setText("X more in queue");
+		txtpnBerthingQueueOverflow.setBounds(222, 225, 204, 16);
+		panelQueueStatus.add(txtpnBerthingQueueOverflow);
 		
 		JPanel panelTaxiStatus = new JPanel();
 		panelTaxiStatus.setBounds(6, 367, 441, 73);
@@ -140,21 +274,161 @@ public class CargoSimUI extends JFrame {
 		panelTaxiStatus.setLayout(null);
 		
 		JTextPane txtpnTaxiStatus = new JTextPane();
-		txtpnTaxiStatus.setBounds(6, 6, 125, 62);
+		txtpnTaxiStatus.setBounds(6, 6, 429, 62);
 		txtpnTaxiStatus.setText("TAXI STATUS");
 		panelTaxiStatus.add(txtpnTaxiStatus);
-		
-		JTextArea txtrTimeRemainingOn = new JTextArea();
-		txtrTimeRemainingOn.setText("TIME REMAINING ON TASK");
-		txtrTimeRemainingOn.setBounds(137, 6, 298, 61);
-		panelTaxiStatus.add(txtrTimeRemainingOn);
 		
 		JPanel panelAnimation = new JPanel();
 		panelAnimation.setBounds(6, 452, 441, 94);
 		contentPane.add(panelAnimation);
 		
 		JTextArea txtrFancyAnimationGoes = new JTextArea();
-		txtrFancyAnimationGoes.setText("FANCY ANIMATION GOES HERE");
+		txtrFancyAnimationGoes.setText("ANIMATION PANEL");
 		panelAnimation.add(txtrFancyAnimationGoes);
+		
+		try{
+			loadEvents();
+		} catch(Exception e) {
+			System.out.println(e.getMessage());
+		}
 	}
+	
+	/**
+	 * Load simulation log into memory
+	 */
+	public void loadEvents() throws Exception {
+		//Locate and load config file
+		Path simlog = Paths.get("");		// Get current working directory
+		simlog = simlog.resolve(SIMULATION_LOG_NAME);		// Append simlog name to directory
+		
+		// initialize event list
+		events = new LinkedList<String[]>();
+		for(String[] l : events) {
+			l = new String[6];
+		}
+		
+		BufferedReader br = new BufferedReader(new FileReader(simlog.toAbsolutePath().toString()));
+		String line = null;
+		while((line = br.readLine()) != null) {
+			events.add(line.split(","));
+		}
+		br.close();
+	}
+	
+	/**
+	 * Process a line the output file as an event, update model accordingly
+	 */
+	public void handleEvent(String[] event) throws Exception {
+		int eventType = Integer.parseInt(event[1]);
+		int currentTaxiStatus = Integer.parseInt(event[2]);
+		
+		// event types 1-3 correspond to a new plane landing on the runway (of types 1 through 3 repsectively)
+		if(eventType > 0 && eventType <= 3) {
+			berthingQueue.add(new Plane(event[1],event[3]));
+		}
+		
+		// event types 4 and 5 correspond to a storm starting and ending respectively
+		if(eventType > 3 && eventType <= 5) {
+			if (eventType == 4) { isStorming = true; }
+			if (eventType == 5) { isStorming = false;} 
+		}
+		
+		// event type 6 corresponds to the taxi starting to berth a plane
+		if(eventType == 6) {
+			// remove from berthing queue (FIFO)
+			berthingQueue.removeFirst();
+			// update taxi status
+			taxiStatus = currentTaxiStatus;
+		}
+		
+		// event type 7 corresponds to the taxi starting to deberth a plane
+		if(eventType == 7) {
+			Plane p = null;
+			// find plane to deberth
+			for(Plane pp : deberthingQueue) {
+				if(pp.getId() == Integer.parseInt(event[3])){
+					p = pp;		//hah, pee pee.
+				}
+			}
+			// deberth it
+			deberthingQueue.remove(p);
+			// update taxi status
+			taxiStatus = currentTaxiStatus;
+		}
+		
+		// event type 8 corresponds to plane loading activity finishing
+		if(eventType == 8) {
+			// find plane to update
+			Plane p = null;
+			for(Plane pp : deberthingQueue) {
+				if(pp.getId() == Integer.parseInt(event[3])){
+					p = pp;
+				}
+			}
+			p.setLoading(false);
+		}
+		
+		// event type 9 corresponds to a berth activity finishing
+		if(eventType == 9) {
+			Plane p = new Plane(event[1], event[3]);
+			p.setBerthNumber(event[5]);
+			p.setLoading(true);
+			deberthingQueue.add(p);
+		}
+		
+		// event type 10 corresponds to a deberth activity finishing
+		if(eventType == 10) {
+			// update taxi status
+			taxiStatus = currentTaxiStatus;
+		}
+		
+		// event type 11 corresponds to the taxi returning to berth with no plane
+		if(eventType == 11) {
+			taxiStatus = currentTaxiStatus;
+		}
+		
+	}
+	
+	/**
+	 * Redraw view based on the current state of the model
+	 */
+	public void draw() throws Exception {
+		JTextPane[] berthingQueueTextPanes = {txtpnBerthingQueue1, txtpnBerthingQueue2, txtpnBerthingQueue3};
+		JTextPane[] deberthingQueueTextPanes = {txtpnDeberthingQueue1, txtpnDeberthingQueue2, txtpnDeberthingQueue3};
+		
+		// draw deberthing queue
+		for(Plane p : deberthingQueue) {
+			if(p.berthNumber == 1)
+				txtpnDeberthingQueue1.setText(p.getInfo());
+			if(p.berthNumber == 2)
+				txtpnDeberthingQueue2.setText(p.getInfo());
+			if(p.berthNumber == 3)
+				txtpnDeberthingQueue3.setText(p.getInfo());
+		}
+		
+		// draw berthing queue
+		if(deberthingQueue.size() >= 3) {
+			txtpnBerthingQueue1.setText(berthingQueue.get(0).getInfo());
+			txtpnBerthingQueue2.setText(berthingQueue.get(1).getInfo());
+			txtpnBerthingQueue3.setText(berthingQueue.get(2).getInfo());
+			txtpnBerthingQueueOverflow.setText((berthingQueue.size() - 3) + " more in queue");
+		}	else {
+			int i = 0;
+			while(i < berthingQueue.size()) {
+				berthingQueueTextPanes[i].setText(berthingQueue.get(i).getInfo());
+				i++;
+			}
+			while(i < berthingQueueTextPanes.length) {
+				berthingQueueTextPanes[i].setText("");
+			}
+		}
+		
+		// update slider position
+		
+		// draw taxi status
+		
+		
+	}
+
+	
 }
