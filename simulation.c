@@ -67,7 +67,7 @@ void taxi_deberthing();
 void end_simulation();
 
 int main4() {
-    FILE *input = fopen("input.in", "r");
+    FILE *input = fopen("input.ini", "r");
     //load_input_file(input);
     fclose(input);
 }
@@ -123,7 +123,7 @@ int main() {
     timest(0.0, 0);
 
     /* Load the input paramters for times and such */
-    FILE *input = fopen("input.in", "r");
+    FILE *input = fopen("input.ini", "r");
     verification_log = fopen("verification.log", "w");
     load_input_file(input, verification_log);
     fclose(input);
@@ -247,6 +247,11 @@ int main() {
     statistics_log = fopen("statistics.log", "w");
     generate_statistics(statistics_log);
     fclose(statistics_log);
+
+    /*  Clean up files  */
+    remove("plane_list.dat");
+    remove("storm_list.dat");
+    remove("storm_list.csv");
 }
 
 
@@ -615,7 +620,7 @@ void save_log_file_verbose(FILE *output_log) {
         berth_number = transfer[BERTH_NUMBER];
 
         fprintf(output_log,
-                "%06.1f  ,Event: %s  ,Taxi: %s  ,Plane id: %03d   ,Storm %s   ,Berth: %d  ,Runway: %d  ,%d\n",
+                "Time: %06.1f  ,Event: %s  ,Taxi: %s  ,Plane id: %03d   ,Storm %s   ,Berth: %d  ,Runway: %d  ,Deberthing queue: %d\n",
                 time, event, taxi, plane_id, storm, berth_number, (int)transfer[RUNWAY_SIZE], (int)transfer[DEBERTH_QUEUE_SIZE]);
     }
 }
