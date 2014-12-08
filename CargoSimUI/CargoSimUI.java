@@ -57,7 +57,7 @@ public class CargoSimUI extends JFrame {
 	private int t; 	// time in minutes
 	private SwingWorker currentThread;
 	
-	
+	  
 	// constants
 	final String SIMULATION_LOG_NAME = "output_log.csv";
 	final int TAXI_IDLE = 0;
@@ -65,7 +65,7 @@ public class CargoSimUI extends JFrame {
 	final int TAXI_TRAVELLING_TO_BERTHS = 2;
 	final int TAXI_BERTHING_PLANE = 3;
 	final int TAXI_DEBERTHING_PLANE = 4;
-	final long ANIMATION_THREAD_DELAY = 1; 
+	final long ANIMATION_THREAD_DELAY = 10; 
 	final int MAX_TIME = 525599;
 	
 	/*########### Nested Classes ###########*/
@@ -110,8 +110,10 @@ public class CargoSimUI extends JFrame {
 			for(int i = 0; !isCancelled() && i < MAX_TIME; i++){
 				int eventTime = Integer.parseInt(currentEvent[0]);
 				t++;
+				System.out.println("Time: " + t);
 				if(t == eventTime) {
 					handleEvent(currentEvent);
+					
 					if(events.indexOf(currentEvent) < events.size() - 1)
 						currentEvent = events.get(events.indexOf(currentEvent) + 1);
 				}
@@ -218,6 +220,25 @@ public class CargoSimUI extends JFrame {
 		panelTimeControl.add(lblCurrentHour);
 		
 		JButton btnStop = new JButton("STOP");
+		btnStop.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				Plane p1 = new Plane("1","1");
+				Plane p2 = new Plane("2","2");
+				Plane p3 = new Plane("3","3");
+				p1.setBerthNumber("1");
+				p2.setBerthNumber("2");
+				p3.setBerthNumber("3");
+				deberthingQueue.add(p1);
+				deberthingQueue.add(p2);
+				//deberthingQueue.add(p3);
+				
+				try{
+					draw();
+				} catch(Exception eeee) {
+					System.out.println(eeee.getMessage());
+				}
+			}
+		});
 		btnStop.setBounds(6, 62, 117, 29);
 		panelTimeControl.add(btnStop);
 		
@@ -291,6 +312,9 @@ public class CargoSimUI extends JFrame {
 		} catch(Exception e) {
 			System.out.println(e.getMessage());
 		}
+		
+		deberthingQueue = new LinkedList<Plane>();
+		berthingQueue = new LinkedList<Plane>();
 	}
 	
 	/**
@@ -407,7 +431,7 @@ public class CargoSimUI extends JFrame {
 		}
 		
 		// draw berthing queue
-		if(deberthingQueue.size() >= 3) {
+		if(berthingQueue.size() >= 3) {
 			txtpnBerthingQueue1.setText(berthingQueue.get(0).getInfo());
 			txtpnBerthingQueue2.setText(berthingQueue.get(1).getInfo());
 			txtpnBerthingQueue3.setText(berthingQueue.get(2).getInfo());
@@ -420,6 +444,7 @@ public class CargoSimUI extends JFrame {
 			}
 			while(i < berthingQueueTextPanes.length) {
 				berthingQueueTextPanes[i].setText("");
+				i++;
 			}
 		}
 		
