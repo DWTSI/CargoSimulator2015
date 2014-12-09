@@ -66,7 +66,7 @@ public class CargoSimUI extends JFrame {
 	final int TAXI_TRAVELLING_TO_BERTHS = 2;
 	final int TAXI_BERTHING_PLANE = 3;
 	final int TAXI_DEBERTHING_PLANE = 4;
-	long ANIMATION_THREAD_DELAY = 1; 
+	long ANIMATION_THREAD_DELAY = 100; 
 	final int MAX_TIME = 525599;
 	
 	/*########### Nested Classes ###########*/
@@ -111,22 +111,17 @@ public class CargoSimUI extends JFrame {
 			for(int i = 0; !isCancelled() && i < MAX_TIME; i++){
 				int eventTime = Integer.parseInt(currentEvent[0]);
 				t++;
-				//System.out.println("Time: " + t);
-				if(t == eventTime) {
+				//This is really bad. But it works.
+				while(t == eventTime) {
 					handleEvent(currentEvent);
 					
-					if(events.indexOf(currentEvent) < events.size() - 1)
+					if(events.indexOf(currentEvent) < events.size() - 1) {
 						currentEvent = events.get(events.indexOf(currentEvent) + 1);
+						eventTime = Integer.parseInt(currentEvent[0]);
+					}			
+					draw();
+					Thread.sleep(ANIMATION_THREAD_DELAY);
 				}
-				if(t == eventTime) {
-					handleEvent(currentEvent);
-					
-					if(events.indexOf(currentEvent) < events.size() - 1)
-						currentEvent = events.get(events.indexOf(currentEvent) + 1);
-				}
-				
-				draw();
-				Thread.sleep(ANIMATION_THREAD_DELAY);
 			}
 			return null;
 		}
@@ -184,14 +179,14 @@ public class CargoSimUI extends JFrame {
 		txtfldAnimationRate = new JTextField();
 		txtfldAnimationRate.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				int nuDelay = 1;
+				int nuDelay = 100;
 				try {
 					nuDelay = Integer.parseInt(txtfldAnimationRate.getText());
 				}
 				catch (NumberFormatException asdfasdf) {
-					txtfldAnimationRate.setText("1");
+					txtfldAnimationRate.setText("100");
 				}
-				if (nuDelay > 0)
+				if (nuDelay > 0 && nuDelay < 10000)
 				ANIMATION_THREAD_DELAY = nuDelay;
 			}
 		});
@@ -238,7 +233,7 @@ public class CargoSimUI extends JFrame {
 		btnPause.setBounds(6, 6, 117, 29);
 		panelTimeControl.add(btnPause);
 		
-		JLabel lblAnimationRate = new JLabel("  Speed (msec/min):");
+		JLabel lblAnimationRate = new JLabel("  Speed:");
 		lblAnimationRate.setBounds(135, 18, 134, 16);
 		panelTimeControl.add(lblAnimationRate);
 		
