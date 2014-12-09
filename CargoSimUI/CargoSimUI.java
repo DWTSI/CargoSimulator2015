@@ -43,9 +43,10 @@ public class CargoSimUI extends JFrame {
 	private JTextPane txtpnBerthingQueue1;
 	private JTextPane txtpnBerthingQueue2;
 	private JTextPane txtpnBerthingQueue3;
-	private JTextPane txtpnDeberthingQueueOverflow;
 	private JTextPane txtpnBerthingQueueOverflow;
 	private JTextPane txtpnIsStorming;
+	private JTextPane txtpnTaxiStatus;
+	private JSlider slider;
 	
 	
 	// globals
@@ -53,6 +54,7 @@ public class CargoSimUI extends JFrame {
 	String[] currentEvent;
 	private LinkedList<Plane> deberthingQueue;
 	private LinkedList<Plane> berthingQueue;
+	private LinkedList<Plane> transit;
 	private boolean isStorming;
 	private int taxiStatus;
 	private int t; 	// time in minutes
@@ -62,7 +64,7 @@ public class CargoSimUI extends JFrame {
 	// constants
 	final String SIMULATION_LOG_NAME = "output_log.csv";
 	final int TAXI_IDLE = 0;
-	final int TAXI_TRAVELING_TO_RUNWAY = 1;
+	final int TAXI_TRAVELLING_TO_RUNWAY = 1;
 	final int TAXI_TRAVELLING_TO_BERTHS = 2;
 	final int TAXI_BERTHING_PLANE = 3;
 	final int TAXI_DEBERTHING_PLANE = 4;
@@ -118,8 +120,13 @@ public class CargoSimUI extends JFrame {
 					if(events.indexOf(currentEvent) < events.size() - 1)
 						currentEvent = events.get(events.indexOf(currentEvent) + 1);
 				}
+				if(t == eventTime) {
+					handleEvent(currentEvent);
+					
+					if(events.indexOf(currentEvent) < events.size() - 1)
+						currentEvent = events.get(events.indexOf(currentEvent) + 1);
+				}
 				
-				publish();
 				draw();
 				Thread.sleep(ANIMATION_THREAD_DELAY);
 			}
@@ -127,7 +134,7 @@ public class CargoSimUI extends JFrame {
 		}
 		
 		protected void process() throws Exception {
-			draw();
+			// who cares?
 		}
 	}
 	
@@ -154,6 +161,13 @@ public class CargoSimUI extends JFrame {
 	 * Create the frame.
 	 */
 	public CargoSimUI() {
+
+		// initialize globals
+		deberthingQueue = new LinkedList<Plane>();
+		berthingQueue = new LinkedList<Plane>();
+		transit = new LinkedList<Plane>();
+		isStorming = false;
+		
 		setTitle("CargoSimulator2015");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 453, 574);
@@ -180,7 +194,7 @@ public class CargoSimUI extends JFrame {
 		txtfldCurrentHour.setColumns(10);
 		
 		
-		final JSlider slider = new JSlider();
+		slider = new JSlider();
 		slider.setValue(0);
 		slider.addChangeListener(new ChangeListener() {
 			public void stateChanged(ChangeEvent e) {
@@ -194,8 +208,6 @@ public class CargoSimUI extends JFrame {
 		JButton btnPlay = new JButton("PLAY");
 		btnPlay.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				t = 0;		// reset time
-				currentEvent = events.getFirst();
 				
 				(currentThread = new AnimationThread()).execute();
 			}
@@ -280,22 +292,25 @@ public class CargoSimUI extends JFrame {
 		txtpnBerthingQueue3.setBounds(222, 158, 204, 60);
 		panelQueueStatus.add(txtpnBerthingQueue3);
 		
-		txtpnDeberthingQueueOverflow = new JTextPane();
-		txtpnDeberthingQueueOverflow.setText("X more in queue");
-		txtpnDeberthingQueueOverflow.setBounds(6, 225, 204, 16);
-		panelQueueStatus.add(txtpnDeberthingQueueOverflow);
-		
 		txtpnBerthingQueueOverflow = new JTextPane();
-		txtpnBerthingQueueOverflow.setText("X more in queue");
+		txtpnBerthingQueueOverflow.setText("0 more in queue");
 		txtpnBerthingQueueOverflow.setBounds(222, 225, 204, 16);
 		panelQueueStatus.add(txtpnBerthingQueueOverflow);
+		
+		JLabel lblRunway = new JLabel("Runway :");
+		lblRunway.setBounds(222, 2, 61, 16);
+		panelQueueStatus.add(lblRunway);
+		
+		JLabel lblDeberthingQueue = new JLabel("Deberthing Queue :");
+		lblDeberthingQueue.setBounds(6, 2, 138, 16);
+		panelQueueStatus.add(lblDeberthingQueue);
 		
 		JPanel panelTaxiStatus = new JPanel();
 		panelTaxiStatus.setBounds(6, 367, 441, 73);
 		contentPane.add(panelTaxiStatus);
 		panelTaxiStatus.setLayout(null);
 		
-		JTextPane txtpnTaxiStatus = new JTextPane();
+		txtpnTaxiStatus = new JTextPane();
 		txtpnTaxiStatus.setBounds(6, 6, 429, 62);
 		txtpnTaxiStatus.setText("TAXI STATUS");
 		panelTaxiStatus.add(txtpnTaxiStatus);
@@ -308,7 +323,7 @@ public class CargoSimUI extends JFrame {
 		txtrFancyAnimationGoes.setText("ANIMATION PANEL");
 		panelAnimation.add(txtrFancyAnimationGoes);
 		
-		JTextPane txtpnIsStorming = new JTextPane();
+		txtpnIsStorming = new JTextPane();
 		txtpnIsStorming.setText("Storm : off");
 		txtpnIsStorming.setBounds(6, 444, 441, 30);
 		contentPane.add(txtpnIsStorming);
@@ -319,10 +334,8 @@ public class CargoSimUI extends JFrame {
 			System.out.println(e.getMessage());
 		}
 		
-		// initialize globals
-		deberthingQueue = new LinkedList<Plane>();
-		berthingQueue = new LinkedList<Plane>();
-		isStorming = false;
+		t = 0;		// reset time
+		currentEvent = events.getFirst();
 	}
 	
 	/**
@@ -357,18 +370,20 @@ public class CargoSimUI extends JFrame {
 		// event types 1-3 correspond to a new plane landing on the runway (of types 1 through 3 repsectively)
 		if(eventType > 0 && eventType <= 3) {
 			berthingQueue.add(new Plane(event[1],event[3]));
+			taxiStatus = currentTaxiStatus;
 		}
 		
 		// event types 4 and 5 correspond to a storm starting and ending respectively
 		if(eventType > 3 && eventType <= 5) {
 			if (eventType == 4) { isStorming = true; }
 			if (eventType == 5) { isStorming = false;} 
+			taxiStatus = currentTaxiStatus;
 		}
 		
 		// event type 6 corresponds to the taxi starting to berth a plane
 		if(eventType == 6) {
 			// remove from berthing queue (FIFO)
-			berthingQueue.removeFirst();
+			transit.add(berthingQueue.removeFirst());
 			// update taxi status
 			taxiStatus = currentTaxiStatus;
 		}
@@ -399,14 +414,21 @@ public class CargoSimUI extends JFrame {
 				}
 			}
 			p.setLoading(false);
+			taxiStatus = currentTaxiStatus;
 		}
 		
 		// event type 9 corresponds to a berth activity finishing
 		if(eventType == 9) {
-			Plane p = new Plane(event[1], event[3]);
+			Plane p = null;
+			// find plane in transit to berth
+			for(Plane pp : transit){
+				if(pp.getId() == Integer.parseInt(event[3]))
+					p = pp;
+			}
 			p.setBerthNumber(event[5]);
 			p.setLoading(true);
 			deberthingQueue.add(p);
+			taxiStatus = currentTaxiStatus;
 		}
 		
 		// event type 10 corresponds to a deberth activity finishing
@@ -425,10 +447,10 @@ public class CargoSimUI extends JFrame {
 	/**
 	 * Redraw view based on the current state of the model
 	 */
-	public void draw() throws Exception {
+	public void draw() {
 		JTextPane[] berthingQueueTextPanes = {txtpnBerthingQueue1, txtpnBerthingQueue2, txtpnBerthingQueue3};
 		JTextPane[] deberthingQueueTextPanes = {txtpnDeberthingQueue1, txtpnDeberthingQueue2, txtpnDeberthingQueue3};
-		
+
 		// draw deberthing queue
 		for(JTextPane tp : deberthingQueueTextPanes) {
 			tp.setText("");
@@ -464,15 +486,21 @@ public class CargoSimUI extends JFrame {
 		}
 		
 		// update slider position
+		slider.setValue(t);
 		
 		// draw taxi status
-		
+		if(taxiStatus == TAXI_BERTHING_PLANE)
+			txtpnTaxiStatus.setText("Taxi status : Berthing Plane");
+		else if(taxiStatus == TAXI_DEBERTHING_PLANE)
+			txtpnTaxiStatus.setText("Taxi status : Deberthing Plane");
+		else if(taxiStatus == TAXI_IDLE)
+			txtpnTaxiStatus.setText("Taxi status : Idle");
+		else if(taxiStatus == TAXI_TRAVELLING_TO_RUNWAY)
+			txtpnTaxiStatus.setText("Taxi status : Travelling to runway");
+		else if(taxiStatus == TAXI_TRAVELLING_TO_BERTHS)
+			txtpnTaxiStatus.setText("Taxi status : Travelling to berths");
 		// draw storm status
-//		try{
-//			txtpnIsStorming.setText("Storming : " + isStorming);
-//		} catch (Exception ee) {
-//			System.out.println(ee.getMessage());
-//		}
+		txtpnIsStorming.setText("Storming : " + isStorming);
 		
 		this.txtfldCurrentHour.setText("" + (t/60.0f));
 	}
