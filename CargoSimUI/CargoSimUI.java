@@ -52,6 +52,8 @@ public class CargoSimUI extends JFrame {
 	private JTextPane txtpnIsStorming;
 	private JTextPane txtpnTaxiStatus;
 	private JSlider slider;
+	private JPanel panelQueueStatus;
+	private JPanel panelTimeControl;
 	
 	
 	// globals
@@ -172,6 +174,7 @@ public class CargoSimUI extends JFrame {
 	 * Create the frame.
 	 */
 	public CargoSimUI() {
+		setBackground(new Color(240, 240, 240));
 		
 		try {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
@@ -188,14 +191,14 @@ public class CargoSimUI extends JFrame {
 		
 		setTitle("CargoSimulator2015");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(100, 100, 453, 406);
+		setBounds(100, 100, 453, 425);
 		contentPane = new JPanel();
 		contentPane.setBackground(Color.LIGHT_GRAY);
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
 		contentPane.setLayout(null);
 		
-		JPanel panelTimeControl = new JPanel();
+		panelTimeControl = new JPanel();
 		panelTimeControl.setBackground(Color.LIGHT_GRAY);
 		panelTimeControl.setBounds(6, 6, 441, 97);
 		contentPane.add(panelTimeControl);
@@ -301,7 +304,7 @@ public class CargoSimUI extends JFrame {
 		lblIntervalminutes.setBounds(229, 12, 98, 16);
 		panelTimeControl.add(lblIntervalminutes);
 		
-		JPanel panelQueueStatus = new JPanel();
+		panelQueueStatus = new JPanel();
 		panelQueueStatus.setBackground(Color.LIGHT_GRAY);
 		panelQueueStatus.setBounds(6, 115, 441, 247);
 		contentPane.add(panelQueueStatus);
@@ -491,6 +494,17 @@ public class CargoSimUI extends JFrame {
 		if (t != (t/ANIMATION_INTERVAL)*ANIMATION_INTERVAL)
 			return;
 		
+		Color c;
+		if (!isStorming) {
+			c = new Color(217, 217, 217);
+		}
+		else {
+			c = Color.LIGHT_GRAY;
+		}
+		contentPane.setBackground(c);
+		panelQueueStatus.setBackground(c);
+		panelTimeControl.setBackground(c);
+		
 		try {
 			TimeUnit.MILLISECONDS.sleep(ANIMATION_THREAD_DELAY);
 		} catch (InterruptedException e) {
@@ -501,14 +515,31 @@ public class CargoSimUI extends JFrame {
 		// draw deberthing queue
 		for(JTextPane tp : deberthingQueueTextPanes) {
 			tp.setText("");
+			tp.setBackground(new Color(255, 255, 255));
 		}
 		for(Plane p : deberthingQueue) {
-			if(p.berthNumber == 1)
-				txtpnDeberthingQueue1.setText(p.getInfo());
-			if(p.berthNumber == 2)
-				txtpnDeberthingQueue2.setText(p.getInfo());
-			if(p.berthNumber == 3)
-				txtpnDeberthingQueue3.setText(p.getInfo());
+			deberthingQueueTextPanes[p.berthNumber-1].setText(p.getInfo());
+			if (!p.isLoading) 
+				deberthingQueueTextPanes[p.berthNumber-1].setBackground(new Color(0, 240, 0));
+			else
+				deberthingQueueTextPanes[p.berthNumber-1].setBackground(new Color(255, 255, 255));
+			
+//			if(p.berthNumber == 1) {
+//				txtpnDeberthingQueue1.setText(p.getInfo());
+//				if (!p.isLoading)
+//					txtpnDeberthingQueue1.setBackground(new Color(0, 240, 0));
+//				else 
+//			}
+//			if(p.berthNumber == 2) {
+//				txtpnDeberthingQueue2.setText(p.getInfo());
+//				if (!p.isLoading)
+//					txtpnDeberthingQueue1.setBackground(new Color(0, 240, 0));
+//			}
+//			if(p.berthNumber == 3) {
+//				txtpnDeberthingQueue3.setText(p.getInfo());
+//				if (!p.isLoading)
+//					txtpnDeberthingQueue1.setBackground(new Color(0, 240, 0));
+//			}
 		}
 		
 		// draw berthing queue
