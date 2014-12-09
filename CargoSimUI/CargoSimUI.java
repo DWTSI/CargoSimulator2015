@@ -75,8 +75,8 @@ public class CargoSimUI extends JFrame {
 	final int TAXI_TRAVELLING_TO_BERTHS = 2;
 	final int TAXI_BERTHING_PLANE = 3;
 	final int TAXI_DEBERTHING_PLANE = 4;
-	long ANIMATION_THREAD_DELAY = 10; 
-	int ANIMATION_INTERVAL = 60; // in minutes, 600 is 10 hours
+	long ANIMATION_THREAD_DELAY = 50;  //in milliseconds 
+	int ANIMATION_INTERVAL = 30; // in minutes. 600 is 10 hours
 	final int MAX_TIME = 525599;
 	private JTextField txtfldInterval;
 	
@@ -193,7 +193,7 @@ public class CargoSimUI extends JFrame {
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 453, 425);
 		contentPane = new JPanel();
-		contentPane.setBackground(Color.LIGHT_GRAY);
+		contentPane.setBackground(new Color(192, 192, 192));
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
 		contentPane.setLayout(null);
@@ -205,15 +205,15 @@ public class CargoSimUI extends JFrame {
 		panelTimeControl.setLayout(null);
 		
 		txtfldAnimationRate = new JTextField();
-		txtfldAnimationRate.setText("10");
+		txtfldAnimationRate.setText("50");
 		txtfldAnimationRate.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				int nuDelay = 1;
+				int nuDelay = 50;
 				try {
 					nuDelay = Integer.parseInt(txtfldAnimationRate.getText());
 				}
 				catch (NumberFormatException asdfasdf) {
-					txtfldAnimationRate.setText("100");
+					txtfldAnimationRate.setText("50");
 				}
 				if (nuDelay > 0 && nuDelay < 100000)
 				ANIMATION_THREAD_DELAY = nuDelay;
@@ -224,15 +224,15 @@ public class CargoSimUI extends JFrame {
 		txtfldAnimationRate.setColumns(10);
 		
 		txtfldInterval = new JTextField();
-		txtfldInterval.setText("60");
+		txtfldInterval.setText("30");
 		txtfldInterval.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				int nuDelay = 60;
+				int nuDelay = 30;
 				try {
 					nuDelay = Integer.parseInt(txtfldInterval.getText());
 				}
 				catch (NumberFormatException asdfasdf) {
-					txtfldInterval.setText("100");
+					txtfldInterval.setText("30");
 				}
 				if (nuDelay > 0 && nuDelay < 100000)
 				ANIMATION_INTERVAL = nuDelay;
@@ -494,6 +494,7 @@ public class CargoSimUI extends JFrame {
 		if (t != (t/ANIMATION_INTERVAL)*ANIMATION_INTERVAL)
 			return;
 		
+		// Make the color of the background darker if there is a storm.
 		Color c;
 		if (!isStorming) {
 			c = new Color(217, 217, 217);
@@ -504,6 +505,12 @@ public class CargoSimUI extends JFrame {
 		contentPane.setBackground(c);
 		panelQueueStatus.setBackground(c);
 		panelTimeControl.setBackground(c);
+		slider.setBackground(c);
+		txtpnIsStorming.setBackground(c);
+		txtpnTaxiStatus.setBackground(c);
+		txtpnBerthingQueueOverflow.setBackground(c);
+		
+		
 		
 		try {
 			TimeUnit.MILLISECONDS.sleep(ANIMATION_THREAD_DELAY);
@@ -519,27 +526,13 @@ public class CargoSimUI extends JFrame {
 		}
 		for(Plane p : deberthingQueue) {
 			deberthingQueueTextPanes[p.berthNumber-1].setText(p.getInfo());
-			if (!p.isLoading) 
-				deberthingQueueTextPanes[p.berthNumber-1].setBackground(new Color(0, 240, 0));
-			else
-				deberthingQueueTextPanes[p.berthNumber-1].setBackground(new Color(255, 255, 255));
+//			if (!p.isLoading) 
+//				deberthingQueueTextPanes[p.berthNumber-1].setBackground(new Color(0, 240, 0));
+//			else
+//				deberthingQueueTextPanes[p.berthNumber-1].setBackground(new Color(255, 255, 255));
 			
-//			if(p.berthNumber == 1) {
-//				txtpnDeberthingQueue1.setText(p.getInfo());
-//				if (!p.isLoading)
-//					txtpnDeberthingQueue1.setBackground(new Color(0, 240, 0));
-//				else 
-//			}
-//			if(p.berthNumber == 2) {
-//				txtpnDeberthingQueue2.setText(p.getInfo());
-//				if (!p.isLoading)
-//					txtpnDeberthingQueue1.setBackground(new Color(0, 240, 0));
-//			}
-//			if(p.berthNumber == 3) {
-//				txtpnDeberthingQueue3.setText(p.getInfo());
-//				if (!p.isLoading)
-//					txtpnDeberthingQueue1.setBackground(new Color(0, 240, 0));
-//			}
+			Color color = getColorFromId(p.id);
+			deberthingQueueTextPanes[p.berthNumber-1].setBackground(color);
 		}
 		
 		// draw berthing queue
@@ -550,15 +543,24 @@ public class CargoSimUI extends JFrame {
 			txtpnBerthingQueue1.setText(berthingQueue.get(0).getInfo());
 			txtpnBerthingQueue2.setText(berthingQueue.get(1).getInfo());
 			txtpnBerthingQueue3.setText(berthingQueue.get(2).getInfo());
+			Color color = getColorFromId(berthingQueue.get(0).id);
+			berthingQueueTextPanes[0].setBackground(color);
+			color = getColorFromId(berthingQueue.get(1).id);
+			berthingQueueTextPanes[1].setBackground(color);
+			color = getColorFromId(berthingQueue.get(2).id);
+			berthingQueueTextPanes[2].setBackground(color);
 			txtpnBerthingQueueOverflow.setText((berthingQueue.size() - 3) + " more in queue");
 		}	else {
 			int i = 0;
 			while(i < berthingQueue.size()) {
 				berthingQueueTextPanes[i].setText(berthingQueue.get(i).getInfo());
+				Color color = getColorFromId(berthingQueue.get(i).id);
+				berthingQueueTextPanes[i].setBackground(color);
 				i++;
 			}
 			while(i < berthingQueueTextPanes.length) {
 				berthingQueueTextPanes[i].setText("");
+				berthingQueueTextPanes[i].setBackground(Color.WHITE);
 				i++;
 			}
 		}
@@ -583,6 +585,37 @@ public class CargoSimUI extends JFrame {
 		
 		// draw current time
 		this.txtfldCurrentHour.setText("" + ((double)Math.round(t/60.0f * 100)/100));
+	}
+	
+	
+	
+	private Color getColorFromId(int planeId) {
+		int colorId = planeId;
+		while (colorId > 8) {
+			colorId = colorId - 8;
+		}
+		
+		switch (colorId) {
+		case 1:
+			return Color.RED;
+		case 2:
+			return Color.GREEN;
+		case 3:
+			return Color.CYAN;
+		case 4:
+			return Color.YELLOW;
+		case 5:
+			return Color.MAGENTA;
+		case 6:
+			return Color.ORANGE;
+		case 7:
+			return Color.BLUE;
+		case 8:
+			return Color.PINK;
+		}
+		
+		return Color.WHITE;
+		
 	}
 	
 	public void closeSim() {

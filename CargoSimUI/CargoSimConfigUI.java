@@ -350,7 +350,7 @@ public class CargoSimConfigUI extends JFrame {
 		try {
             copyFileOutOfJar("CargoSimulator2015.exe");
             System.out.println(runFile("CargoSimulator2015.exe"));
-            //Thread.sleep(5000);
+            //Thread.sleep(1000);
             deleteFile("CargoSimulator2015.exe");
             CargoSimUI.main(null);
             this.setVisible(false);
