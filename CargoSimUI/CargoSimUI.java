@@ -123,6 +123,8 @@ public class CargoSimUI extends JFrame {
 					Thread.sleep(ANIMATION_THREAD_DELAY);
 				}
 			}
+			if( t == MAX_TIME )
+				closeSim();
 			return null;
 		}
 		
@@ -233,7 +235,8 @@ public class CargoSimUI extends JFrame {
 		btnPause.setBounds(6, 6, 117, 29);
 		panelTimeControl.add(btnPause);
 		
-		JLabel lblAnimationRate = new JLabel("  Speed:");
+
+		JLabel lblAnimationRate = new JLabel("  Speed : ");
 		lblAnimationRate.setBounds(135, 18, 134, 16);
 		panelTimeControl.add(lblAnimationRate);
 		
@@ -241,24 +244,11 @@ public class CargoSimUI extends JFrame {
 		lblCurrentHour.setBounds(281, 18, 98, 16);
 		panelTimeControl.add(lblCurrentHour);
 		
-		JButton btnStop = new JButton("STOP");
+		JButton btnStop = new JButton("END");
 		btnStop.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				Plane p1 = new Plane("1","1");
-				Plane p2 = new Plane("2","2");
-				Plane p3 = new Plane("3","3");
-				p1.setBerthNumber("1");
-				p2.setBerthNumber("2");
-				p3.setBerthNumber("3");
-				deberthingQueue.add(p1);
-				deberthingQueue.add(p2);
-				//deberthingQueue.add(p3);
-				
-				try{
-					draw();
-				} catch(Exception eeee) {
-					System.out.println(eeee.getMessage());
-				}
+				currentThread.cancel(true);
+				closeSim();
 			}
 		});
 		btnStop.setBounds(6, 62, 117, 29);
@@ -504,5 +494,10 @@ public class CargoSimUI extends JFrame {
 		
 		// draw current time
 		this.txtfldCurrentHour.setText("" + ((double)Math.round(t/60.0f * 100)/100));
+	}
+	
+	public void closeSim() {
+		CargoSimStatUI.main(null);
+		this.setVisible(false);
 	}
 }
