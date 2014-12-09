@@ -1,7 +1,6 @@
 import java.awt.BorderLayout;
 import java.awt.EventQueue;
 import java.awt.List;
-
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
@@ -13,7 +12,6 @@ import javax.swing.JButton;
 import javax.swing.JTextField;
 import javax.swing.JLabel;
 import javax.swing.SwingWorker;
-
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.io.BufferedReader;
@@ -24,11 +22,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.LinkedList;
 import java.util.Queue;
-
 import javax.swing.event.ChangeListener;
 import javax.swing.event.ChangeEvent;
-
 import java.awt.Color;
+import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeEvent;
 
 
 public class CargoSimUI extends JFrame {
@@ -68,7 +66,7 @@ public class CargoSimUI extends JFrame {
 	final int TAXI_TRAVELLING_TO_BERTHS = 2;
 	final int TAXI_BERTHING_PLANE = 3;
 	final int TAXI_DEBERTHING_PLANE = 4;
-	final long ANIMATION_THREAD_DELAY = 1; 
+	long ANIMATION_THREAD_DELAY = 1; 
 	final int MAX_TIME = 525599;
 	
 	/*########### Nested Classes ###########*/
@@ -170,18 +168,33 @@ public class CargoSimUI extends JFrame {
 		
 		setTitle("CargoSimulator2015");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(100, 100, 453, 574);
+		setBounds(100, 100, 453, 406);
 		contentPane = new JPanel();
+		contentPane.setBackground(Color.LIGHT_GRAY);
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
 		contentPane.setLayout(null);
 		
 		JPanel panelTimeControl = new JPanel();
+		panelTimeControl.setBackground(Color.LIGHT_GRAY);
 		panelTimeControl.setBounds(6, 6, 441, 97);
 		contentPane.add(panelTimeControl);
 		panelTimeControl.setLayout(null);
 		
 		txtfldAnimationRate = new JTextField();
+		txtfldAnimationRate.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				int nuDelay = 1;
+				try {
+					nuDelay = Integer.parseInt(txtfldAnimationRate.getText());
+				}
+				catch (NumberFormatException asdfasdf) {
+					txtfldAnimationRate.setText("1");
+				}
+				if (nuDelay > 0)
+				ANIMATION_THREAD_DELAY = nuDelay;
+			}
+		});
 		txtfldAnimationRate.setBounds(135, 32, 134, 28);
 		panelTimeControl.add(txtfldAnimationRate);
 		txtfldAnimationRate.setColumns(10);
@@ -195,6 +208,7 @@ public class CargoSimUI extends JFrame {
 		
 		
 		slider = new JSlider();
+		slider.setBackground(Color.LIGHT_GRAY);
 		slider.setValue(0);
 		slider.addChangeListener(new ChangeListener() {
 			public void stateChanged(ChangeEvent e) {
@@ -224,11 +238,11 @@ public class CargoSimUI extends JFrame {
 		btnPause.setBounds(6, 6, 117, 29);
 		panelTimeControl.add(btnPause);
 		
-		JLabel lblAnimationRate = new JLabel("Animation Rate");
+		JLabel lblAnimationRate = new JLabel("  Speed (msec/min):");
 		lblAnimationRate.setBounds(135, 18, 134, 16);
 		panelTimeControl.add(lblAnimationRate);
 		
-		JLabel lblCurrentHour = new JLabel("Current Hour:");
+		JLabel lblCurrentHour = new JLabel("  Current Hour:");
 		lblCurrentHour.setBounds(281, 18, 98, 16);
 		panelTimeControl.add(lblCurrentHour);
 		
@@ -256,6 +270,7 @@ public class CargoSimUI extends JFrame {
 		panelTimeControl.add(btnStop);
 		
 		JPanel panelQueueStatus = new JPanel();
+		panelQueueStatus.setBackground(Color.LIGHT_GRAY);
 		panelQueueStatus.setBounds(6, 115, 441, 247);
 		contentPane.add(panelQueueStatus);
 		panelQueueStatus.setLayout(null);
@@ -293,6 +308,7 @@ public class CargoSimUI extends JFrame {
 		panelQueueStatus.add(txtpnBerthingQueue3);
 		
 		txtpnBerthingQueueOverflow = new JTextPane();
+		txtpnBerthingQueueOverflow.setBackground(Color.LIGHT_GRAY);
 		txtpnBerthingQueueOverflow.setText("0 more in queue");
 		txtpnBerthingQueueOverflow.setBounds(222, 225, 204, 16);
 		panelQueueStatus.add(txtpnBerthingQueueOverflow);
@@ -305,27 +321,16 @@ public class CargoSimUI extends JFrame {
 		lblDeberthingQueue.setBounds(6, 2, 138, 16);
 		panelQueueStatus.add(lblDeberthingQueue);
 		
-		JPanel panelTaxiStatus = new JPanel();
-		panelTaxiStatus.setBounds(6, 367, 441, 73);
-		contentPane.add(panelTaxiStatus);
-		panelTaxiStatus.setLayout(null);
-		
 		txtpnTaxiStatus = new JTextPane();
-		txtpnTaxiStatus.setBounds(6, 6, 429, 62);
+		txtpnTaxiStatus.setBackground(Color.LIGHT_GRAY);
+		txtpnTaxiStatus.setBounds(6, 225, 204, 16);
+		panelQueueStatus.add(txtpnTaxiStatus);
 		txtpnTaxiStatus.setText("TAXI STATUS");
-		panelTaxiStatus.add(txtpnTaxiStatus);
-		
-		JPanel panelAnimation = new JPanel();
-		panelAnimation.setBounds(6, 480, 441, 66);
-		contentPane.add(panelAnimation);
-		
-		JTextArea txtrFancyAnimationGoes = new JTextArea();
-		txtrFancyAnimationGoes.setText("ANIMATION PANEL");
-		panelAnimation.add(txtrFancyAnimationGoes);
 		
 		txtpnIsStorming = new JTextPane();
-		txtpnIsStorming.setText("Storm : off");
-		txtpnIsStorming.setBounds(6, 444, 441, 30);
+		txtpnIsStorming.setBackground(Color.LIGHT_GRAY);
+		txtpnIsStorming.setText("Storming : false");
+		txtpnIsStorming.setBounds(160, 362, 113, 21);
 		contentPane.add(txtpnIsStorming);
 		
 		try{
@@ -399,7 +404,6 @@ public class CargoSimUI extends JFrame {
 			}
 			// deberth it
 			deberthingQueue.remove(p);
-			System.out.println("Removed plane from deberthing queue: " + p.getId());
 			// update taxi status
 			taxiStatus = currentTaxiStatus;
 		}
@@ -464,7 +468,7 @@ public class CargoSimUI extends JFrame {
 				txtpnDeberthingQueue3.setText(p.getInfo());
 		}
 		
-//		 draw berthing queue
+		// draw berthing queue
 		for(JTextPane tp : berthingQueueTextPanes) {
 			tp.setText("");
 		}
@@ -499,9 +503,11 @@ public class CargoSimUI extends JFrame {
 			txtpnTaxiStatus.setText("Taxi status : Travelling to runway");
 		else if(taxiStatus == TAXI_TRAVELLING_TO_BERTHS)
 			txtpnTaxiStatus.setText("Taxi status : Travelling to berths");
+		
 		// draw storm status
 		txtpnIsStorming.setText("Storming : " + isStorming);
 		
-		this.txtfldCurrentHour.setText("" + (t/60.0f));
+		// draw current time
+		this.txtfldCurrentHour.setText("" + ((double)Math.round(t/60.0f * 100)/100));
 	}
 }
