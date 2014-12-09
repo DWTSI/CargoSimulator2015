@@ -1,6 +1,7 @@
 import java.awt.BorderLayout;
 import java.awt.EventQueue;
 import java.awt.List;
+
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
@@ -12,6 +13,9 @@ import javax.swing.JButton;
 import javax.swing.JTextField;
 import javax.swing.JLabel;
 import javax.swing.SwingWorker;
+import javax.swing.UIManager;
+import javax.swing.UnsupportedLookAndFeelException;
+
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.io.BufferedReader;
@@ -22,8 +26,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.concurrent.TimeUnit;
+
 import javax.swing.event.ChangeListener;
 import javax.swing.event.ChangeEvent;
+
 import java.awt.Color;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeEvent;
@@ -66,8 +73,10 @@ public class CargoSimUI extends JFrame {
 	final int TAXI_TRAVELLING_TO_BERTHS = 2;
 	final int TAXI_BERTHING_PLANE = 3;
 	final int TAXI_DEBERTHING_PLANE = 4;
-	long ANIMATION_THREAD_DELAY = 100; 
+	long ANIMATION_THREAD_DELAY = 10; 
+	int ANIMATION_INTERVAL = 60; // in minutes, 600 is 10 hours
 	final int MAX_TIME = 525599;
+	private JTextField txtfldInterval;
 	
 	/*########### Nested Classes ###########*/
 	
@@ -108,9 +117,10 @@ public class CargoSimUI extends JFrame {
 
 		@Override
 		protected Void doInBackground() throws Exception {
-			for(int i = 0; !isCancelled() && i < MAX_TIME; i++){
+			for(int i = 0; !isCancelled() && t < MAX_TIME; i++){
 				int eventTime = Integer.parseInt(currentEvent[0]);
 				t++;
+				
 				//This is really bad. But it works.
 				while(t == eventTime) {
 					handleEvent(currentEvent);
@@ -118,11 +128,17 @@ public class CargoSimUI extends JFrame {
 					if(events.indexOf(currentEvent) < events.size() - 1) {
 						currentEvent = events.get(events.indexOf(currentEvent) + 1);
 						eventTime = Integer.parseInt(currentEvent[0]);
-					}			
-					draw();
-					Thread.sleep(ANIMATION_THREAD_DELAY);
+					}
+					//if it's the last event, increment t
+					if (events.indexOf(currentEvent) == events.size() - 1) {
+						t++;
+					}
 				}
+				draw();
+				//Thread.sleep(ANIMATION_THREAD_DELAY);
+//				TimeUnit.NANOSECONDS.sleep(ANIMATION_THREAD_DELAY);
 			}
+			
 			if( t == MAX_TIME )
 				closeSim();
 			return null;
@@ -156,6 +172,13 @@ public class CargoSimUI extends JFrame {
 	 * Create the frame.
 	 */
 	public CargoSimUI() {
+		
+		try {
+			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+		} catch (Exception e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
 
 		// initialize globals
 		deberthingQueue = new LinkedList<Plane>();
@@ -179,27 +202,47 @@ public class CargoSimUI extends JFrame {
 		panelTimeControl.setLayout(null);
 		
 		txtfldAnimationRate = new JTextField();
+		txtfldAnimationRate.setText("10");
 		txtfldAnimationRate.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				int nuDelay = 100;
+				int nuDelay = 1;
 				try {
 					nuDelay = Integer.parseInt(txtfldAnimationRate.getText());
 				}
 				catch (NumberFormatException asdfasdf) {
 					txtfldAnimationRate.setText("100");
 				}
-				if (nuDelay > 0 && nuDelay < 10000)
+				if (nuDelay > 0 && nuDelay < 100000)
 				ANIMATION_THREAD_DELAY = nuDelay;
 			}
 		});
-		txtfldAnimationRate.setBounds(135, 32, 134, 28);
+		txtfldAnimationRate.setBounds(135, 32, 86, 28);
 		panelTimeControl.add(txtfldAnimationRate);
 		txtfldAnimationRate.setColumns(10);
+		
+		txtfldInterval = new JTextField();
+		txtfldInterval.setText("60");
+		txtfldInterval.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				int nuDelay = 60;
+				try {
+					nuDelay = Integer.parseInt(txtfldInterval.getText());
+				}
+				catch (NumberFormatException asdfasdf) {
+					txtfldInterval.setText("100");
+				}
+				if (nuDelay > 0 && nuDelay < 100000)
+				ANIMATION_INTERVAL = nuDelay;
+			}
+		});
+		txtfldInterval.setBounds(232, 32, 86, 28);
+		panelTimeControl.add(txtfldInterval);
+		txtfldInterval.setColumns(10);
 		
 
 		txtfldCurrentHour = new JTextField();
 		txtfldCurrentHour.setText("0");
-		txtfldCurrentHour.setBounds(281, 32, 134, 28);
+		txtfldCurrentHour.setBounds(329, 32, 86, 28);
 		panelTimeControl.add(txtfldCurrentHour);
 		txtfldCurrentHour.setColumns(10);
 		
@@ -236,12 +279,12 @@ public class CargoSimUI extends JFrame {
 		panelTimeControl.add(btnPause);
 		
 
-		JLabel lblAnimationRate = new JLabel("  Speed : ");
-		lblAnimationRate.setBounds(135, 18, 134, 16);
+		JLabel lblAnimationRate = new JLabel("msec/interval:");
+		lblAnimationRate.setBounds(133, 12, 73, 16);
 		panelTimeControl.add(lblAnimationRate);
 		
 		JLabel lblCurrentHour = new JLabel("  Current Hour:");
-		lblCurrentHour.setBounds(281, 18, 98, 16);
+		lblCurrentHour.setBounds(326, 12, 98, 16);
 		panelTimeControl.add(lblCurrentHour);
 		
 		JButton btnStop = new JButton("END");
@@ -253,6 +296,10 @@ public class CargoSimUI extends JFrame {
 		});
 		btnStop.setBounds(6, 62, 117, 29);
 		panelTimeControl.add(btnStop);
+		
+		JLabel lblIntervalminutes = new JLabel("Interval (minutes):");
+		lblIntervalminutes.setBounds(229, 12, 98, 16);
+		panelTimeControl.add(lblIntervalminutes);
 		
 		JPanel panelQueueStatus = new JPanel();
 		panelQueueStatus.setBackground(Color.LIGHT_GRAY);
@@ -439,7 +486,18 @@ public class CargoSimUI extends JFrame {
 	public void draw() {
 		JTextPane[] berthingQueueTextPanes = {txtpnBerthingQueue1, txtpnBerthingQueue2, txtpnBerthingQueue3};
 		JTextPane[] deberthingQueueTextPanes = {txtpnDeberthingQueue1, txtpnDeberthingQueue2, txtpnDeberthingQueue3};
-
+		
+		/* Draw only every animation interval */
+		if (t != (t/ANIMATION_INTERVAL)*ANIMATION_INTERVAL)
+			return;
+		
+		try {
+			TimeUnit.MILLISECONDS.sleep(ANIMATION_THREAD_DELAY);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 		// draw deberthing queue
 		for(JTextPane tp : deberthingQueueTextPanes) {
 			tp.setText("");

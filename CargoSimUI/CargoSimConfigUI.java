@@ -1,19 +1,28 @@
-import java.awt.BorderLayout;
 import java.awt.EventQueue;
-
-import javax.swing.JFrame;
-import javax.swing.JPanel;
-import javax.swing.border.EmptyBorder;
-import javax.swing.JButton;
-import javax.swing.JTextField;
-import javax.swing.JLabel;
-import javax.swing.JSeparator;
-
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
 import java.awt.Font;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Paths;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JSeparator;
+import javax.swing.JTextField;
+import javax.swing.UIManager;
+import javax.swing.border.EmptyBorder;
 
 
 public class CargoSimConfigUI extends JFrame {
@@ -59,9 +68,17 @@ public class CargoSimConfigUI extends JFrame {
 	 * Create the frame.
 	 */
 	public CargoSimConfigUI() {
+		
+		try {
+			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+		} catch (Exception e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		
 		setTitle("CargoSimulator2015");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(100, 100, 405, 560);
+		setBounds(100, 100, 405, 576);
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
@@ -107,7 +124,7 @@ public class CargoSimConfigUI extends JFrame {
 		lblNewLabel.setBounds(6, 72, 119, 16);
 		contentPane.add(lblNewLabel);
 		
-		JLabel label = new JLabel("±");
+		JLabel label = new JLabel("\u00B1");
 		label.setBounds(240, 72, 25, 16);
 		contentPane.add(label);
 		
@@ -173,7 +190,7 @@ public class CargoSimConfigUI extends JFrame {
 		txtfldTimeLoad1.setBounds(71, 193, 96, 28);
 		contentPane.add(txtfldTimeLoad1);
 		
-		JLabel label_2 = new JLabel("±");
+		JLabel label_2 = new JLabel("\u00B1");
 		label_2.setBounds(167, 199, 25, 16);
 		contentPane.add(label_2);
 		
@@ -197,7 +214,7 @@ public class CargoSimConfigUI extends JFrame {
 		txtfldTimeLoad2.setBounds(71, 221, 96, 28);
 		contentPane.add(txtfldTimeLoad2);
 		
-		JLabel label_5 = new JLabel("±");
+		JLabel label_5 = new JLabel("\u00B1");
 		label_5.setBounds(167, 227, 25, 16);
 		contentPane.add(label_5);
 		
@@ -221,7 +238,7 @@ public class CargoSimConfigUI extends JFrame {
 		txtfldTimeLoad3.setBounds(71, 249, 96, 28);
 		contentPane.add(txtfldTimeLoad3);
 		
-		JLabel label_8 = new JLabel("±");
+		JLabel label_8 = new JLabel("\u00B1");
 		label_8.setBounds(167, 255, 25, 16);
 		contentPane.add(label_8);
 		
@@ -295,7 +312,7 @@ public class CargoSimConfigUI extends JFrame {
 		txtfldTimeStormDur.setBounds(120, 409, 96, 28);
 		contentPane.add(txtfldTimeStormDur);
 		
-		JLabel label_12 = new JLabel("±");
+		JLabel label_12 = new JLabel("\u00B1");
 		label_12.setBounds(215, 415, 25, 16);
 		contentPane.add(label_12);
 		
@@ -330,8 +347,16 @@ public class CargoSimConfigUI extends JFrame {
 	}
 	
 	public void startSimulation() {
-		CargoSimUI.main(null);
-		this.setVisible(false);
+		try {
+            copyFileOutOfJar("CargoSimulator2015.exe");
+            System.out.println(runFile("CargoSimulator2015.exe"));
+            //Thread.sleep(5000);
+            deleteFile("CargoSimulator2015.exe");
+            CargoSimUI.main(null);
+            this.setVisible(false);
+        } catch (Exception ex) {
+            Logger.getLogger(CargoSimConfigUI.class.getName()).log(Level.SEVERE, null, ex);
+        }
 	}
 	
 	public void generate_config_file_default() throws FileNotFoundException {
@@ -391,4 +416,32 @@ public class CargoSimConfigUI extends JFrame {
 		out.close();
 		
 	}
+	
+	private static int runFile(String filename) throws IOException, InterruptedException {
+        return Runtime.getRuntime().exec(filename).waitFor();
+    }
+
+    private static void deleteFile(String filename) throws NoSuchFileException, IOException {
+        Files.deleteIfExists(Paths.get(filename));
+    }
+
+    private static void copyFileOutOfJar(String filename) throws FileNotFoundException, IOException {  
+        InputStream stream = CargoSimConfigUI.class.getResourceAsStream("/cargosimulator2015/" + filename);
+
+        if (stream == null) {
+            // exception for empty stream
+        }
+
+        OutputStream resStreamOut;
+        int readBytes;
+        byte[] buffer = new byte[4096];
+
+        resStreamOut = new FileOutputStream(new File(filename));
+        while ((readBytes = stream.read(buffer)) > 0) {
+            resStreamOut.write(buffer, 0, readBytes);
+        }
+
+        stream.close();
+        resStreamOut.close();
+    }
 }
