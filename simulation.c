@@ -494,7 +494,7 @@ void generate_statistics(FILE *statistics_log) {
             get_stats_time_average_num_planes(LIST_AVG_PLANES_RUNWAY));
 
     fprintf(statistics_log,
-            "    deberthing queue: %.1f\n",
+            "    deberthing queue: %.3f\n",
             get_stats_time_average_num_planes(LIST_AVG_PLANES_DEBERTH));
 }
 
