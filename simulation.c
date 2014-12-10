@@ -96,7 +96,7 @@ int main() {
     list_rank[LIST_AVG_PLANES_DEBERTH] = EVENT_TIME;
 
     /* Set max attributes in a list to 9, for simlog */
-    maxatr = 9;
+    maxatr = 10;
 
     storm_state = STORM_OFF;
     taxi_state  = TAXI_IDLE;
@@ -241,12 +241,12 @@ int main() {
     output_log = fopen("output_log.csv", "w");
     save_log_file(output_log);
     fclose(output_log);
-
-    output_log = fopen("output_log.csv", "r");
+    /*
+    output_log = fopen("output_log.csv", "w");
     //verify_output(output_log, verification_log);
     fclose(output_log);
     fclose(verification_log);
-
+    */
     statistics_log = fopen("statistics.log", "w");
     generate_statistics(statistics_log);
     fclose(statistics_log);
@@ -601,13 +601,19 @@ void save_log_file(FILE *output_log) {
 
     while(row != NULL) {
         value = row->value;
-        fprintf(output_log, "%d,%d,%d,%d,%d,%d\n",
+        fprintf(output_log, "%d,%d,%d,%d,%d,%d",
                 (int)value[EVENT_TIME],
                 (int)value[EVENT_TYPE],
                 (int)value[TAXI_STATE],
                 (int)value[PLANE_ID],
                 (int)value[STORM_STATE],
                 (int)value[BERTH_NUMBER]);
+        /*  This is purely for the loading bars on the GUI */
+        if (value[EVENT_TYPE] == EVENT_BERTH_FINISH)
+            fprintf(output_log, ",%d\n",
+                                (int)value[LOAD_TIME]);
+        else
+            fprintf(output_log, ",\n");
         row = row->sr;
     }
 }
@@ -812,6 +818,7 @@ void berth_finish(int berth_number) {
     transfer[PLANE_ID] = p->id;
     event_schedule(sim_time+load_time, EVENT_FINISH_LOADING);
 
+    transfer[LOAD_TIME] = load_time;
     log_event(sim_time, EVENT_BERTH_FINISH, taxi_state, p->id, storm_state, berth_number+1);
 }
 

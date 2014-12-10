@@ -33,6 +33,10 @@
 #define TIME_TOOK_OFF 1
 #define PLANE_TYPE   2
 
+/*  Loading time, logged only with the berth_finish event
+    Only use is for the GUI loading bars. */
+#define LOAD_TIME 10
+
 
 /*  These define the different states for the taxi.
     These will be stored in a global taxi struct.  */
