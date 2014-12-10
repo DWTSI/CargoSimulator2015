@@ -87,11 +87,21 @@ public class CargoSimUI extends JFrame {
 	    private int id;
 	    private int berthNumber;
 	    private boolean isLoading;
+	    private boolean isFinishedLoading = false;
+	    private int timeStartLoading;
+	    private int loadingTime = 0;
+	    
+	    private int[] loadingTimes = {18, 24, 36};
 	    
 	    public int getType(){ return this.type; }
 	    public int getId(){ return this.id; }
 	    public void setBerthNumber(String b){ this.berthNumber = Integer.parseInt(b); }
-	    public void setLoading(boolean l){ this.isLoading = l; }
+	    public void setLoading(boolean l){ 
+	    	this.isLoading = l;
+	    	if (l == true) {
+	    		timeStartLoading = t;
+	    	}
+	    }
 	    
 	    public Plane(int type, int id){
 	    	this.type = type;
@@ -105,12 +115,42 @@ public class CargoSimUI extends JFrame {
 	    	this.id = Integer.parseInt(id);
 	    }
 	    
+	    public float getPercentLoaded() {
+	    	
+	    	//int totalTime = loadingTimes[type-1];
+	    	//totalTime = totalTime*60;
+	    	
+	    	float result = (float)(t-timeStartLoading)/((float)loadingTime);
+	    	if (result > 1)
+	    		result = 1;
+	    	return result;
+	    }
+	    
+	    public String getPercentBar() {
+	    	String s = "[";
+	    	int length = 20;
+	    	int percent = (int)((float)length*getPercentLoaded());
+	    	int blank = length - percent;
+	    	for (int i=0; i<percent; i++)
+	    		s += "=";
+	    	for (int i=0; i<blank; i++)
+	    		s += "..";
+	    	s += "]";
+	    	return s;
+	    }
+	    
 	    // returns a formatted string to be displayed in UI text panels
 	    public String getInfo() {
 	    	String r = "";
 	    	r += "Plane ID: " + id + "\n";
 	    	r += "Plane Type: " + type + "\n";
-	    	r += "Plane loading:" + isLoading + "\n";
+	    	if (isLoading) {
+	    		//r += "Plane loading: " + isLoading + "\n";
+	    		//r += "Percent loaded: " + (t-timeStartLoading) + " " + (loadingTimes[type-1]*60) + "\n";
+	    		r += getPercentBar() + "\n";
+	    	}
+	    	
+	    	
 	    	return r;
 	    }
 	}
@@ -389,7 +429,7 @@ public class CargoSimUI extends JFrame {
 		// initialize event list
 		events = new LinkedList<String[]>();
 		for(String[] l : events) {
-			l = new String[6];
+			l = new String[7];
 		}
 		
 		BufferedReader br = new BufferedReader(new FileReader(simlog.toAbsolutePath().toString()));
@@ -466,6 +506,7 @@ public class CargoSimUI extends JFrame {
 			}
 			p.setBerthNumber(event[5]);
 			p.setLoading(true);
+			p.loadingTime = Integer.parseInt(event[6]);
 			deberthingQueue.add(p);
 			taxiStatus = currentTaxiStatus;
 		}
