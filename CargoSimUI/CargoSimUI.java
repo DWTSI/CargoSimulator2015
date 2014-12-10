@@ -40,7 +40,6 @@ public class CargoSimUI extends JFrame {
 	
 	// GUI globals
 	private JPanel contentPane;
-	private JTextField txtfldAnimationRate;
 	private JTextField txtfldCurrentHour;
 	private JTextPane txtpnDeberthingQueue1;
 	private JTextPane txtpnDeberthingQueue2;
@@ -54,6 +53,7 @@ public class CargoSimUI extends JFrame {
 	private JSlider slider;
 	private JPanel panelQueueStatus;
 	private JPanel panelTimeControl;
+	private JLabel lblAnimationRate;
 	
 	
 	// globals
@@ -78,7 +78,11 @@ public class CargoSimUI extends JFrame {
 	long ANIMATION_THREAD_DELAY = 50;  //in milliseconds 
 	int ANIMATION_INTERVAL = 30; // in minutes. 600 is 10 hours
 	final int MAX_TIME = 525599;
-	private JTextField txtfldInterval;
+	int BERTHING_ID;
+	int DEBERTHING_ID;
+	int TIME_TAXI_START_BERTH;
+	int TIME_TAXI_START_DEBERTH;
+	private JSlider sliderAnimationRate;
 	
 	/*########### Nested Classes ###########*/
 	
@@ -133,7 +137,7 @@ public class CargoSimUI extends JFrame {
 	    	int blank = length - percent;
 	    	for (int i=0; i<percent; i++)
 	    		s += "=";
-	    	for (int i=0; i<blank; i++)
+	    	for (int i=0; i<blank-1; i++)
 	    		s += "..";
 	    	s += "]";
 	    	return s;
@@ -244,44 +248,6 @@ public class CargoSimUI extends JFrame {
 		contentPane.add(panelTimeControl);
 		panelTimeControl.setLayout(null);
 		
-		txtfldAnimationRate = new JTextField();
-		txtfldAnimationRate.setText("50");
-		txtfldAnimationRate.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				int nuDelay = 50;
-				try {
-					nuDelay = Integer.parseInt(txtfldAnimationRate.getText());
-				}
-				catch (NumberFormatException asdfasdf) {
-					txtfldAnimationRate.setText("50");
-				}
-				if (nuDelay > 0 && nuDelay < 100000)
-				ANIMATION_THREAD_DELAY = nuDelay;
-			}
-		});
-		txtfldAnimationRate.setBounds(135, 32, 86, 28);
-		panelTimeControl.add(txtfldAnimationRate);
-		txtfldAnimationRate.setColumns(10);
-		
-		txtfldInterval = new JTextField();
-		txtfldInterval.setText("30");
-		txtfldInterval.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				int nuDelay = 30;
-				try {
-					nuDelay = Integer.parseInt(txtfldInterval.getText());
-				}
-				catch (NumberFormatException asdfasdf) {
-					txtfldInterval.setText("30");
-				}
-				if (nuDelay > 0 && nuDelay < 100000)
-				ANIMATION_INTERVAL = nuDelay;
-			}
-		});
-		txtfldInterval.setBounds(232, 32, 86, 28);
-		panelTimeControl.add(txtfldInterval);
-		txtfldInterval.setColumns(10);
-		
 
 		txtfldCurrentHour = new JTextField();
 		txtfldCurrentHour.setText("0");
@@ -321,11 +287,6 @@ public class CargoSimUI extends JFrame {
 		btnPause.setBounds(6, 6, 117, 29);
 		panelTimeControl.add(btnPause);
 		
-
-		JLabel lblAnimationRate = new JLabel("msec/interval:");
-		lblAnimationRate.setBounds(133, 12, 73, 16);
-		panelTimeControl.add(lblAnimationRate);
-		
 		JLabel lblCurrentHour = new JLabel("  Current Hour:");
 		lblCurrentHour.setBounds(326, 12, 98, 16);
 		panelTimeControl.add(lblCurrentHour);
@@ -340,9 +301,25 @@ public class CargoSimUI extends JFrame {
 		btnStop.setBounds(6, 62, 117, 29);
 		panelTimeControl.add(btnStop);
 		
-		JLabel lblIntervalminutes = new JLabel("Interval (minutes):");
-		lblIntervalminutes.setBounds(229, 12, 98, 16);
-		panelTimeControl.add(lblIntervalminutes);
+		lblAnimationRate = new JLabel("Animation Rate:");
+		lblAnimationRate.setBounds(135, 12, 181, 14);
+		panelTimeControl.add(lblAnimationRate);
+		
+		sliderAnimationRate = new JSlider();
+		sliderAnimationRate.addChangeListener(new ChangeListener() {
+			public void stateChanged(ChangeEvent arg0) {
+				lblAnimationRate.setText("Animation Rate : " + sliderAnimationRate.getValue());
+				ANIMATION_INTERVAL = sliderAnimationRate.getValue();
+			}
+		});
+		sliderAnimationRate.setValue(30);
+		sliderAnimationRate.setMinimum(1);
+		sliderAnimationRate.setMaximum(2000);
+		sliderAnimationRate.setBackground(Color.LIGHT_GRAY);
+		sliderAnimationRate.setBounds(135, 32, 182, 28);
+		panelTimeControl.add(sliderAnimationRate);
+		
+		
 		
 		panelQueueStatus = new JPanel();
 		panelQueueStatus.setBackground(Color.LIGHT_GRAY);
@@ -392,7 +369,7 @@ public class CargoSimUI extends JFrame {
 		lblRunway.setBounds(222, 2, 61, 16);
 		panelQueueStatus.add(lblRunway);
 		
-		JLabel lblDeberthingQueue = new JLabel("Deberthing Queue :");
+		JLabel lblDeberthingQueue = new JLabel("Berths :");
 		lblDeberthingQueue.setBounds(6, 2, 138, 16);
 		panelQueueStatus.add(lblDeberthingQueue);
 		
@@ -400,7 +377,7 @@ public class CargoSimUI extends JFrame {
 		txtpnTaxiStatus.setBackground(Color.LIGHT_GRAY);
 		txtpnTaxiStatus.setBounds(6, 225, 204, 16);
 		panelQueueStatus.add(txtpnTaxiStatus);
-		txtpnTaxiStatus.setText("TAXI STATUS");
+		txtpnTaxiStatus.setText("TAXI STATE");
 		
 		txtpnIsStorming = new JTextPane();
 		txtpnIsStorming.setBackground(Color.LIGHT_GRAY);
@@ -463,14 +440,18 @@ public class CargoSimUI extends JFrame {
 		// event type 6 corresponds to the taxi starting to berth a plane
 		if(eventType == 6) {
 			// remove from berthing queue (FIFO)
-			transit.add(berthingQueue.removeFirst());
+			Plane p = berthingQueue.removeFirst();
+			transit.add(p);
 			// update taxi status
 			taxiStatus = currentTaxiStatus;
+			TIME_TAXI_START_BERTH = t;
+			BERTHING_ID = p.id; 
 		}
 		
 		// event type 7 corresponds to the taxi starting to deberth a plane
 		if(eventType == 7) {
 			Plane p = null;
+			DEBERTHING_ID = Integer.parseInt(event[3]);
 			// find plane to deberth
 			for(Plane pp : deberthingQueue) {
 				if(pp.getId() == Integer.parseInt(event[3])){
@@ -479,8 +460,11 @@ public class CargoSimUI extends JFrame {
 			}
 			// deberth it
 			deberthingQueue.remove(p);
+			
 			// update taxi status
 			taxiStatus = currentTaxiStatus;
+			TIME_TAXI_START_DEBERTH = t;
+			
 		}
 		
 		// event type 8 corresponds to plane loading activity finishing
@@ -548,8 +532,10 @@ public class CargoSimUI extends JFrame {
 		panelTimeControl.setBackground(c);
 		slider.setBackground(c);
 		txtpnIsStorming.setBackground(c);
-		txtpnTaxiStatus.setBackground(c);
 		txtpnBerthingQueueOverflow.setBackground(c);
+		sliderAnimationRate.setBackground(c);
+		if (taxiStatus != TAXI_BERTHING_PLANE && taxiStatus != TAXI_DEBERTHING_PLANE)
+			txtpnTaxiStatus.setBackground(c);
 		
 		
 		
@@ -610,10 +596,21 @@ public class CargoSimUI extends JFrame {
 		slider.setValue(t);
 		
 		// draw taxi status
-		if(taxiStatus == TAXI_BERTHING_PLANE)
+		if(taxiStatus == TAXI_BERTHING_PLANE) {
 			txtpnTaxiStatus.setText("Taxi status : Berthing Plane");
-		else if(taxiStatus == TAXI_DEBERTHING_PLANE)
+			Color color = this.getColorFromId(BERTHING_ID);
+			txtpnTaxiStatus.setBackground(color);
+			//int x = (int)100*(int)((float)(t-this.TIME_TAXI_START_DEBERTH)/(60.0f*60));
+			//txtpnTaxiStatus.setBounds(x+6, 225, 204, 16);
+			//System.out.println(x);
+		}
+		else if(taxiStatus == TAXI_DEBERTHING_PLANE) {
 			txtpnTaxiStatus.setText("Taxi status : Deberthing Plane");
+//			float x = (int)100*(int)((float)(t-this.TIME_TAXI_START_DEBERTH)/60.0f);
+//			txtpnTaxiStatus.setBounds(16, 225, 204, 16);
+			Color color = getColorFromId(DEBERTHING_ID);
+			txtpnTaxiStatus.setBackground(color);
+		}
 		else if(taxiStatus == TAXI_IDLE)
 			txtpnTaxiStatus.setText("Taxi status : Idle");
 		else if(taxiStatus == TAXI_TRAVELLING_TO_RUNWAY)
