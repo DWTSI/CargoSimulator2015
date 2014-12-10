@@ -123,7 +123,7 @@ int main() {
     timest(0.0, 0);
 
     /* Load the input paramters for times and such */
-    FILE *input = fopen("input.ini", "r");
+    FILE *input = fopen("config.ini", "r");
     verification_log = fopen("verification.log", "w");
     load_input_file(input, verification_log);
     fclose(input);
@@ -209,6 +209,9 @@ int main() {
                 break;
         }
 
+        if (sim_time == 129705)
+            printf("%d\n", taxi_state == TAXI_IDLE);
+
         /* Taxi handler */
         switch (taxi_state) {
             case TAXI_IDLE:
@@ -235,9 +238,9 @@ int main() {
     save_log_file_verbose(output_log_verbose);
     fclose(output_log_verbose);
 
-    //output_log = fopen("output_log.csv", "w");
-    //save_log_file(output_log);
-    //fclose(output_log);
+    output_log = fopen("output_log.csv", "w");
+    save_log_file(output_log);
+    fclose(output_log);
 
     output_log = fopen("output_log.csv", "r");
     //verify_output(output_log, verification_log);
@@ -356,7 +359,8 @@ void verify_actors(FILE *storm_list, FILE *plane_list, FILE *verification_log) {
     if (storm_len_avg-TIME_HOUR > G.time_storm_dur ||
         storm_len_avg+TIME_HOUR < G.time_storm_dur)
     {
-        fprintf(verification_log, "actors = -1\n");
+        printf("Average: %f    Specified: %d\n", storm_len_avg/60, G.time_between_storms/60);
+        fprintf(verification_log, "actors = -2\n");
         printf("The generated average storm length does not agree with the specified value.\n");
         exit(0);
     }
@@ -365,7 +369,7 @@ void verify_actors(FILE *storm_list, FILE *plane_list, FILE *verification_log) {
     if (storm_len_max > G.time_storm_dur+G.time_storm_var ||
         storm_len_min < G.time_storm_dur-G.time_storm_var)
     {
-        fprintf(verification_log, "actors = -1\n");
+        fprintf(verification_log, "actors = -3\n");
         printf("The generated storm lengths go out of the specified range.\n");
         exit(0);
     }
@@ -376,9 +380,10 @@ void verify_actors(FILE *storm_list, FILE *plane_list, FILE *verification_log) {
           storm_btw_min = transfer[4];
 
     /* Check if average storm frequency generated agrees with the specified value */
-    if (storm_btw_avg-TIME_HOUR*4 > G.time_between_storms ||
-        storm_btw_avg+TIME_HOUR*4 < G.time_between_storms)
+    if (storm_btw_avg-TIME_HOUR*8 > G.time_between_storms ||
+        storm_btw_avg+TIME_HOUR*8 < G.time_between_storms)
     {
+        printf("Average: %f    Specified: %d\n", storm_btw_avg/60, G.time_between_storms/60);
         fprintf(verification_log, "actors = -1\n");
         printf("The generated average storm frequency does not agree with the specified value.\n");
         exit(0);
@@ -590,38 +595,48 @@ void log_event(int time, int event_type, int taxi_state, int plane_id, bool stor
 void save_log_file(FILE *output_log) {
 
     int i, size = list_size[LIST_LOG];
-    for (i=0; i<size; i++) {
-        list_remove(FIRST, LIST_LOG);
+
+    struct master *row = head[LIST_LOG];
+    float *value;
+
+    while(row != NULL) {
+        value = row->value;
         fprintf(output_log, "%d,%d,%d,%d,%d,%d\n",
-                (int)transfer[EVENT_TIME],
-                (int)transfer[EVENT_TYPE],
-                (int)transfer[TAXI_STATE],
-                (int)transfer[PLANE_ID],
-                (int)transfer[STORM_STATE],
-                (int)transfer[BERTH_NUMBER]);
+                (int)value[EVENT_TIME],
+                (int)value[EVENT_TYPE],
+                (int)value[TAXI_STATE],
+                (int)value[PLANE_ID],
+                (int)value[STORM_STATE],
+                (int)value[BERTH_NUMBER]);
+        row = row->sr;
     }
 }
 
 void save_log_file_verbose(FILE *output_log) {
     int i, size = list_size[LIST_LOG];
+
+    struct master *row = head[LIST_LOG];
+    float *value;
+
     int plane_id, berth_number;
     float time;
     char *event, *taxi, *storm;
 
     //struct master *row = head[LIST_LOG];
 
-    for(i=0; i<size; i++) {
-        list_remove(FIRST, LIST_LOG);
-        time = transfer[EVENT_TIME];//60;
-        event = strings_event[(int)transfer[EVENT_TYPE]];
-        taxi = strings_taxi[(int)transfer[TAXI_STATE]];
-        plane_id = transfer[PLANE_ID];
-        storm = strings_storm[(int)transfer[STORM_STATE]];
-        berth_number = transfer[BERTH_NUMBER];
+    while(row != NULL) {
+        value = row->value;
+        time = value[EVENT_TIME]/60;
+        event = strings_event[(int)value[EVENT_TYPE]];
+        taxi = strings_taxi[(int)value[TAXI_STATE]];
+        plane_id = value[PLANE_ID];
+        storm = strings_storm[(int)value[STORM_STATE]];
+        berth_number = value[BERTH_NUMBER];
 
         fprintf(output_log,
                 "Time: %06.1f  ,Event: %s  ,Taxi: %s  ,Plane id: %03d   ,Storm %s   ,Berth: %d  ,Runway: %d  ,Deberthing queue: %d\n",
-                time, event, taxi, plane_id, storm, berth_number, (int)transfer[RUNWAY_SIZE], (int)transfer[DEBERTH_QUEUE_SIZE]);
+                time, event, taxi, plane_id, storm, berth_number, (int)value[RUNWAY_SIZE], (int)value[DEBERTH_QUEUE_SIZE]);
+        row = row->sr;
     }
 }
 
@@ -731,6 +746,9 @@ void storm_end() {
 
     /* Add the event to the log list */
     log_event(sim_time, EVENT_STORM_END, taxi_state, 0, STORM_OFF, 0);
+
+    //if (taxi_state == TAXI_IDLE)
+      //  taxi_idle();
 }
 
 
@@ -814,6 +832,9 @@ void finish_loading(int berth_number) {
     list_file(INCREASING, LIST_AVG_PLANES_DEBERTH);
 
     log_event(sim_time, EVENT_FINISH_LOADING, taxi_state, p->id, storm_state, berth_number+1);
+
+    //if (taxi_state == TAXI_IDLE)
+      //  taxi_idle();
 }
 
 
@@ -887,9 +908,10 @@ void deberth_finish(int berth_number) {
     /*  This adds the attributes PLANE_ID and TIME_LANDED to transfer and deletes the item from the list\
         This is because you can't edit an item in a list, so I'm deleting the item and re-adding it
         with the new attribute (TIME_TOOK_OFF) */
-    /*int r = */list_delete(LIST_PLANE_PORT_TIME, p->id, PLANE_ID);
+    int r = list_delete(LIST_PLANE_PORT_TIME, p->id, PLANE_ID);
 
     //printf("r = %d\n", r);
+
     transfer[TIME_TOOK_OFF] = sim_time;
     list_file(INCREASING, LIST_PLANE_PORT_TIME);
 
@@ -909,42 +931,35 @@ void taxi_returns() {
 
 
 void taxi_idle() {
+
     /* Do nothing if storm is occurring */
     if (storm_state == STORM_ON)
         return;
 
-    /* Do nothing if runway queue is empty */
-    if (list_size[LIST_RUNWAY] == 0)
-        return;
-
     int finished_berth = check_berths_finished();
-
     int available_berth = check_berths_available();
+    int runway_queue_size = list_size[LIST_RUNWAY];
 
-    /* Check if berths are full */
-    if (available_berth == -1) {
-        /* If berths are full and none are finished, do nothing */
-        if (finished_berth == -1) {
-            return;
-        }
-        /* If berths are full and one is finished, deberth that plane */
-        else {
-
-            transfer[BERTH_NUMBER] = finished_berth;
-            event_schedule(sim_time, EVENT_DEBERTH);
-            taxi_state = TAXI_DEBERTHING;
-            stats.taxi_time_idle += (int)sim_time - stats.taxi_time_idle_last;
-        }
-    }
-    else {
-        /* If berths aren't full, schedule an event to start berthing a plane in 15 minutes. */
+    /*  If the berths aren't full, and there is a plane in the
+        runway queue, then berth a plane. */
+    if (available_berth != -1 && runway_queue_size > 0) {
         transfer[BERTH_NUMBER] = available_berth;
         taxi_state = TAXI_TRAVELLING_RUNWAY;
         stats.taxi_time_idle += (int)sim_time - stats.taxi_time_idle_last;
         stats.taxi_time_travelling_last = (int)sim_time;
         event_schedule(sim_time+G.time_taxi_travel, EVENT_BERTH);
     }
+    /*  If no berths are finished, do nothing. */
+    else if (finished_berth == -1) {
 
+    }
+    /*  If a berth is finished, deberth that plane. */
+    else if (finished_berth > -1) {
+        transfer[BERTH_NUMBER] = finished_berth;
+        event_schedule(sim_time, EVENT_DEBERTH);
+        taxi_state = TAXI_DEBERTHING;
+        stats.taxi_time_idle += (int)sim_time - stats.taxi_time_idle_last;
+    }
 }
 
 

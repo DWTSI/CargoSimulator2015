@@ -168,6 +168,7 @@ int list_delete(int list, float value, int attribute) {
         /* else, the desired attribute is found */
         head[list] = NULL;
         tail[list] = NULL;
+        list_size[list]--;
 
         /* Update the area under the number-in-list curve. */
         timest((float)list_size[list], TIM_VAR + list);
