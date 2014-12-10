@@ -7,6 +7,8 @@
 #include <math.h>
 #include "simlibdefs.h"
 
+#include "../simulation.h"
+
 /* Declare simlib global variables. */
 
 int    *list_rank, *list_size, next_event_type, maxatr = 0, maxlist = 0;
@@ -21,6 +23,7 @@ struct master {
 
 void  init_simlib(void);
 void  list_display(int list, int num_attributes);
+void list_display_plane_times();
 void  event_list_display();
 int   list_delete(int list, float value, int attribute);
 void  event_insert(float time_of_event, int type_of_event);
@@ -109,6 +112,29 @@ void list_display(int list, int num_attributes) {
     }
 }
 
+void list_display_plane_times() {
+    float *value;
+    int i;
+
+    int list = LIST_PLANE_PORT_TIME;
+
+    if (head[list] == NULL) {
+        printf("List %d is empty.", list);
+        return;
+    }
+
+    struct master *row = head[list];
+
+    while (row != NULL) {
+        value = (*row).value;
+        printf("%d  ", (int)value[PLANE_ID]);
+        printf("%.1f  ", value[TIME_LANDED]/60);
+        printf("%.1f  ", value[TIME_TOOK_OFF]/60);
+        printf("\n");
+        row = row->sr;
+    }
+}
+
 void event_list_display() {
     list_display(LIST_EVENT, 2);
 }
@@ -142,6 +168,7 @@ int list_delete(int list, float value, int attribute) {
         /* else, the desired attribute is found */
         head[list] = NULL;
         tail[list] = NULL;
+        list_size[list]--;
 
         /* Update the area under the number-in-list curve. */
         timest((float)list_size[list], TIM_VAR + list);

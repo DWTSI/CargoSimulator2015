@@ -33,12 +33,19 @@ void load_input_file(FILE *input_file, FILE *verification_log);
 
 void verify_actors(FILE *storm_list, FILE *plane_list, FILE *verification_log);
 void verify_output(FILE *output_log, FILE *verification_log);
+void verify_taxi_behavior(FILE *output_log, FILE *verification_log);
+
+void generate_statistics(FILE *statistics_log);
+float* get_stats_in_port_time();
+float get_stats_time_average_num_planes(int list);
 
 void log_event(int time, int event_type, int taxi_state, int plane_id, bool storm, int berth_number);
 void save_log_file(FILE *output_log);
+void save_log_file_verbose(FILE *output_log);
 
 int check_berths_available();
 int check_berths_finished();
+int check_num_berths_finished();
 int get_loading_time(int plane_type);
 
 void plane_land(int plane_type, int plane_id);
@@ -57,8 +64,10 @@ void taxi_travelling_berths();
 void taxi_berthing();
 void taxi_deberthing();
 
+void end_simulation();
+
 int main4() {
-    FILE *input = fopen("input.in", "r");
+    FILE *input = fopen("input.ini", "r");
     //load_input_file(input);
     fclose(input);
 }
@@ -70,27 +79,57 @@ int main() {
          *output_log_verbose,
          *output_log,
          *output_log_read,
-         *verification_log;
+         *verification_log,
+         *statistics_log;
+
+    //int sim_length = TIME_YEAR;
 
     init_simlib();
 
     /* Set the log list to be ordered by event time */
     list_rank[LIST_LOG] = EVENT_TIME;
 
-    /* Set max attributes in a list to 6, for simlog */
-    maxatr = 8;
+    /* Set the in-port residence time list to be ordered by plane id */
+    list_rank[LIST_PLANE_PORT_TIME] = PLANE_ID;
+
+    list_rank[LIST_AVG_PLANES_RUNWAY] = EVENT_TIME;
+    list_rank[LIST_AVG_PLANES_DEBERTH] = EVENT_TIME;
+
+    /* Set max attributes in a list to 9, for simlog */
+    maxatr = 10;
 
     storm_state = STORM_OFF;
     taxi_state  = TAXI_IDLE;
+
+    int i;
+    for (i=0; i<NUMBER_OF_BERTHS; i++) {
+        berths[i].state = BERTH_FREE;
+        berths[i].time_unoccupied_last = 0;
+        berths[i].time_unoccupied = 0;
+        berths[i].time_loading = 0;
+        berths[i].time_loading_last = 0;
+        berths[i].time_occupied = 0;
+        berths[i].time_occupied_last = 0;
+    }
+
+    stats.taxi_time_idle = 0;
+    stats.taxi_time_idle_last = 0;
+    stats.taxi_time_travelling = 0;
+    stats.taxi_time_travelling_last = 0;
+    stats.taxi_time_berthing_deberthing = 0;
+    stats.taxi_time_berthing_deberthing_last = 0;
 
     /* initialize timest */
     timest(0.0, 0);
 
     /* Load the input paramters for times and such */
-    FILE *input = fopen("input.in", "r");
+    FILE *input = fopen("config.ini", "r");
     verification_log = fopen("verification.log", "w");
     load_input_file(input, verification_log);
     fclose(input);
+
+    /* initialize berths array to specified size */
+    //berths = (struct berth *)malloc(sizeof(struct berth)*G.num_berths);
 
     /* Generate the plane and storm list */
     generate_input_files();
@@ -114,11 +153,27 @@ int main() {
         timing();
 
         /* If sim time passes a year, exit the simulation. */
-        if ((int)sim_time>=TIME_YEAR) {
+        if ((int)sim_time>=G.sim_length) {//TIME_YEAR) {
+            if (taxi_state == TAXI_IDLE)
+                stats.taxi_time_idle += G.sim_length - stats.taxi_time_idle_last;
+            if (taxi_state == TAXI_TRAVELLING_BERTHS || taxi_state == TAXI_TRAVELLING_RUNWAY)
+                stats.taxi_time_travelling += G.sim_length - stats.taxi_time_travelling_last;
+            if (taxi_state == TAXI_BERTHING || taxi_state == TAXI_DEBERTHING)
+                stats.taxi_time_berthing_deberthing += G.sim_length - stats.taxi_time_berthing_deberthing_last;
+
+            /*  Because the stats.taxi_time_travelling isn't quite getting all of the time
+                but I know that the idle and berthing/deberthing times are correct,
+                I'm cheating and using those to figure out the travelling time. */
+            stats.taxi_time_travelling = G.sim_length - stats.taxi_time_idle - stats.taxi_time_berthing_deberthing;
             break;
         }
 
-        //printf("Next event time: %.1f,  Next event type: %d\n", transfer[EVENT_TIME]/60, (int)transfer[EVENT_TYPE]);
+        /*
+        printf("%.1f  %.1f  %s  %s\n", sim_time/60,
+                                       stats.taxi_time_berthing_deberthing/60.0f,
+                                       strings_event[(int)transfer[EVENT_TYPE]],
+                                       strings_taxi[taxi_state]);
+                                       */
 
         /* Main event handler switch */
         switch(next_event_type) {
@@ -154,6 +209,9 @@ int main() {
                 break;
         }
 
+        if (sim_time == 129705)
+            printf("%d\n", taxi_state == TAXI_IDLE);
+
         /* Taxi handler */
         switch (taxi_state) {
             case TAXI_IDLE:
@@ -176,23 +234,27 @@ int main() {
 
     printf("Log list size: %d\n", list_size[LIST_LOG]);
 
-    //output_log_verbose = fopen("output_log_verbose.csv", "w");
-    //save_log_file_verbose(output_log_verbose);
-    //fclose(output_log_verbose);
+    output_log_verbose = fopen("output_log_verbose.csv", "w");
+    save_log_file_verbose(output_log_verbose);
+    fclose(output_log_verbose);
 
     output_log = fopen("output_log.csv", "w");
     save_log_file(output_log);
     fclose(output_log);
-
-    output_log = fopen("output_log.csv", "r");
-    verify_output(output_log, verification_log);
+    /*
+    output_log = fopen("output_log.csv", "w");
+    //verify_output(output_log, verification_log);
     fclose(output_log);
     fclose(verification_log);
+    */
+    statistics_log = fopen("statistics.log", "w");
+    generate_statistics(statistics_log);
+    fclose(statistics_log);
 
-    /* statistics */
-    timest(0.0, -TIMEST_RUNWAY);
-    //printf("Time-average number of planes in runway: %f\n", transfer[1]);
-
+    /*  Clean up files  */
+    remove("plane_list.dat");
+    remove("storm_list.dat");
+    remove("storm_list.csv");
 }
 
 
@@ -235,7 +297,8 @@ void load_input_file(FILE *input_file, FILE *verification_log) {
     G.time_load3_var        = input_array[13]*TIME_HOUR;
     G.time_taxi_travel      = (float)input_array[14]*TIME_HOUR;
     G.time_berth_deberth    = input_array[15]*TIME_HOUR;
-    G.num_berths            = input_array[16];
+    G.num_berths            = NUMBER_OF_BERTHS;//input_array[16];
+    G.sim_length            = TIME_YEAR;
 
     printf("Input file loaded.\n");
 }
@@ -296,7 +359,8 @@ void verify_actors(FILE *storm_list, FILE *plane_list, FILE *verification_log) {
     if (storm_len_avg-TIME_HOUR > G.time_storm_dur ||
         storm_len_avg+TIME_HOUR < G.time_storm_dur)
     {
-        fprintf(verification_log, "actors = -1\n");
+        printf("Average: %f    Specified: %d\n", storm_len_avg/60, G.time_between_storms/60);
+        fprintf(verification_log, "actors = -2\n");
         printf("The generated average storm length does not agree with the specified value.\n");
         exit(0);
     }
@@ -305,7 +369,7 @@ void verify_actors(FILE *storm_list, FILE *plane_list, FILE *verification_log) {
     if (storm_len_max > G.time_storm_dur+G.time_storm_var ||
         storm_len_min < G.time_storm_dur-G.time_storm_var)
     {
-        fprintf(verification_log, "actors = -1\n");
+        fprintf(verification_log, "actors = -3\n");
         printf("The generated storm lengths go out of the specified range.\n");
         exit(0);
     }
@@ -316,9 +380,10 @@ void verify_actors(FILE *storm_list, FILE *plane_list, FILE *verification_log) {
           storm_btw_min = transfer[4];
 
     /* Check if average storm frequency generated agrees with the specified value */
-    if (storm_btw_avg-TIME_HOUR*4 > G.time_between_storms ||
-        storm_btw_avg+TIME_HOUR*4 < G.time_between_storms)
+    if (storm_btw_avg-TIME_HOUR*8 > G.time_between_storms ||
+        storm_btw_avg+TIME_HOUR*8 < G.time_between_storms)
     {
+        printf("Average: %f    Specified: %d\n", storm_btw_avg/60, G.time_between_storms/60);
         fprintf(verification_log, "actors = -1\n");
         printf("The generated average storm frequency does not agree with the specified value.\n");
         exit(0);
@@ -354,6 +419,145 @@ void verify_output(FILE *output_log, FILE *verification_log) {
 }
 
 
+/*  Verifies that the taxi behaves according to the specifications.
+    Records the verification result in the verification log file.
+    Records 0 if verified, -1 if not verified. */
+void verify_taxi_behavior(FILE *output_log, FILE *verification_log) {
+
+}
+
+
+void generate_statistics(FILE *statistics_log) {
+    int i;
+
+    fprintf(statistics_log,
+            "Percentage of time the taxi is:\n");
+
+    fprintf(statistics_log,
+            "    idle:                     %04.1f%%\n",
+            (float)stats.taxi_time_idle*100/(G.sim_length));
+
+    fprintf(statistics_log,
+            "    travelling:               %04.1f%%\n",
+            (float)stats.taxi_time_travelling*100/(G.sim_length));
+
+    fprintf(statistics_log,
+            "    berthing/deberthing:      %04.1f%%\n",
+            (float)stats.taxi_time_berthing_deberthing*100/(G.sim_length));
+
+    fprintf(statistics_log, "\n");
+
+    fprintf(statistics_log, "Percentage of time each berth is:\n");
+
+    for (i=0; i<G.num_berths; i++) {
+        fprintf(statistics_log, "  BERTH %d\n", i+1);
+
+        fprintf(statistics_log,
+                "    unoccupied:               %04.1f%%\n",
+                (float)berths[i].time_unoccupied*100/(G.sim_length));
+
+        fprintf(statistics_log,
+                "    occupied and loading:     %04.1f%%\n",
+                (float)berths[i].time_loading*100/(G.sim_length));
+
+        fprintf(statistics_log,
+                "    occupied but not loading: %04.1f%%\n",
+                (float)berths[i].time_occupied*100/(G.sim_length));
+    }
+
+    fprintf(statistics_log, "\n");
+
+    float *stats_in_port_time = get_stats_in_port_time();
+
+    fprintf(statistics_log,
+            "Average in-port residence time:\n");
+
+    fprintf(statistics_log,
+            "    plane type 1:     %.1f hours\n",
+            stats_in_port_time[0]/60);
+
+    fprintf(statistics_log,
+            "    plane type 2:     %.1f hours\n",
+            stats_in_port_time[1]/60);
+
+    fprintf(statistics_log,
+            "    plane type 3:     %.1f hours\n",
+            stats_in_port_time[2]/60);
+
+    fprintf(statistics_log, "\n");
+
+    fprintf(statistics_log,
+            "Time-average number of planes in:\n");
+
+    fprintf(statistics_log,
+            "    runway queue:     %.1f\n",
+            get_stats_time_average_num_planes(LIST_AVG_PLANES_RUNWAY));
+
+    fprintf(statistics_log,
+            "    deberthing queue: %.3f\n",
+            get_stats_time_average_num_planes(LIST_AVG_PLANES_DEBERTH));
+}
+
+float* get_stats_in_port_time() {
+    int list = LIST_PLANE_PORT_TIME;
+    int i, plane_type, num_planes[3];
+    static float total[3];
+    //size = list_size[list];
+
+    struct master *row = head[list];
+
+    /*  Initialize all elements in total to zero */
+    for (i=0; i<3; i++) {
+        total[i] = 0;
+        num_planes[i] = 0;
+    }
+
+    while (row != NULL) {
+        float *value = row->value;
+
+        if (value[TIME_TOOK_OFF] == 0)
+            value[TIME_TOOK_OFF] = TIME_YEAR;
+
+        plane_type = value[PLANE_TYPE]-1;
+
+        total[plane_type] += value[TIME_TOOK_OFF] - value[TIME_LANDED];
+
+        num_planes[plane_type]++;
+
+        row = row->sr;
+    }
+
+    for (i=0; i<3; i++) {
+        total[i] = total[i]/num_planes[i];
+    }
+
+    return total;
+}
+
+/* Calculates the time-average number of planes in the runway queue or deberthing queue.*/
+float get_stats_time_average_num_planes(int list) {
+
+    struct master *row = head[list];
+    int time_last = 0, num_planes_last = 0, total = 0, i = 0;
+    float *value;
+
+     while (row != NULL) {
+        value = row->value;
+        total += num_planes_last*(value[EVENT_TIME] - time_last);
+
+        /* value[2] is the number of planes in the queue at that point in time. */
+        num_planes_last = value[2];
+        time_last = value[EVENT_TIME];
+
+        row = row->sr;
+    }
+
+    return (float)total/TIME_YEAR;
+}
+
+
+
+
 /* log some event into the log list */
 void log_event(int time, int event_type, int taxi_state, int plane_id, bool storm, int berth_number) {
     transfer[1] = time;
@@ -363,6 +567,7 @@ void log_event(int time, int event_type, int taxi_state, int plane_id, bool stor
     transfer[5] = storm;
     transfer[6] = berth_number;
     transfer[7] = list_size[LIST_RUNWAY];
+    transfer[8] = check_num_berths_finished();
 
     /* Add attributes in transfer to log list */
     if (list_size[LIST_LOG] == 0) {
@@ -390,35 +595,54 @@ void log_event(int time, int event_type, int taxi_state, int plane_id, bool stor
 void save_log_file(FILE *output_log) {
 
     int i, size = list_size[LIST_LOG];
-    for (i=0; i<size; i++) {
-        list_remove(FIRST, LIST_LOG);
-        fprintf(output_log, "%d,%d,%d,%d,%d,%d\n",
-                (int)transfer[EVENT_TIME],
-                (int)transfer[EVENT_TYPE],
-                (int)transfer[TAXI_STATE],
-                (int)transfer[PLANE_ID],
-                (int)transfer[STORM_STATE],
-                (int)transfer[BERTH_NUMBER]);
+
+    struct master *row = head[LIST_LOG];
+    float *value;
+
+    while(row != NULL) {
+        value = row->value;
+        fprintf(output_log, "%d,%d,%d,%d,%d,%d",
+                (int)value[EVENT_TIME],
+                (int)value[EVENT_TYPE],
+                (int)value[TAXI_STATE],
+                (int)value[PLANE_ID],
+                (int)value[STORM_STATE],
+                (int)value[BERTH_NUMBER]);
+        /*  This is purely for the loading bars on the GUI */
+        if (value[EVENT_TYPE] == EVENT_BERTH_FINISH)
+            fprintf(output_log, ",%d\n",
+                                (int)value[LOAD_TIME]);
+        else
+            fprintf(output_log, ",\n");
+        row = row->sr;
     }
 }
 
 void save_log_file_verbose(FILE *output_log) {
     int i, size = list_size[LIST_LOG];
+
+    struct master *row = head[LIST_LOG];
+    float *value;
+
     int plane_id, berth_number;
     float time;
     char *event, *taxi, *storm;
-    for(i=0; i<size; i++) {
-        list_remove(FIRST, LIST_LOG);
-        time = transfer[EVENT_TIME]/60;
-        event = strings_event[(int)transfer[EVENT_TYPE]];
-        taxi = strings_taxi[(int)transfer[TAXI_STATE]];
-        plane_id = transfer[PLANE_ID];
-        storm = strings_storm[(int)transfer[STORM_STATE]];
-        berth_number = transfer[BERTH_NUMBER];
+
+    //struct master *row = head[LIST_LOG];
+
+    while(row != NULL) {
+        value = row->value;
+        time = value[EVENT_TIME]/60;
+        event = strings_event[(int)value[EVENT_TYPE]];
+        taxi = strings_taxi[(int)value[TAXI_STATE]];
+        plane_id = value[PLANE_ID];
+        storm = strings_storm[(int)value[STORM_STATE]];
+        berth_number = value[BERTH_NUMBER];
 
         fprintf(output_log,
-                "Time: %06.1f  ,Event: %s  ,Taxi: %s  ,Plane id: %03d   ,Storm %s   ,Berth: %d  ,Runway: %d\n",
-                time, event, taxi, plane_id, storm, berth_number, (int)transfer[RUNWAY_SIZE]);
+                "Time: %06.1f  ,Event: %s  ,Taxi: %s  ,Plane id: %03d   ,Storm %s   ,Berth: %d  ,Runway: %d  ,Deberthing queue: %d\n",
+                time, event, taxi, plane_id, storm, berth_number, (int)value[RUNWAY_SIZE], (int)value[DEBERTH_QUEUE_SIZE]);
+        row = row->sr;
     }
 }
 
@@ -453,6 +677,18 @@ int check_berths_finished() {
     return finished_berth;
 }
 
+/*  Checks the number of berths that are finished (which is also
+    the size of the deberthing queue). */
+int check_num_berths_finished() {
+    int i, num_berths_finished = 0;
+    for (i=0; i<G.num_berths; i++) {
+        if (berths[i].state == BERTH_TAKEN_NOT_LOADING)
+            num_berths_finished++;
+    }
+
+    return num_berths_finished;
+}
+
 
 int get_loading_time(int plane_type) {
     int time = 0, var = 0;
@@ -481,12 +717,24 @@ int get_loading_time(int plane_type) {
 void plane_land(int plane_type, int plane_id) {
     /* Add the plane in transfer to the runway queue */
     transfer[PLANE_ID] = plane_id;
-    transfer[TIME_LANDED] = sim_time;
+    transfer[TIME_LANDED] = sim_time/60;
     transfer[EVENT_TYPE] = plane_type;
     list_file(LAST, LIST_RUNWAY);
 
     /* Add the event to the log list */
     log_event(sim_time, plane_type, taxi_state, plane_id, storm_state, 0);
+
+    /* update time statistics for runway queue */
+    timest((float)sim_time - transfer[TIME_LANDED], TIMEST_RUNWAY);
+    transfer[1] = sim_time;
+    transfer[2] = list_size[LIST_RUNWAY];
+    list_file(INCREASING, LIST_AVG_PLANES_RUNWAY);
+
+    /* Add plane to in-port residence time list */
+    transfer[PLANE_ID] = plane_id;
+    transfer[TIME_LANDED] = sim_time;
+    transfer[PLANE_TYPE] = plane_type;
+    list_file(INCREASING, LIST_PLANE_PORT_TIME);
 }
 
 void storm_start() {
@@ -504,6 +752,9 @@ void storm_end() {
 
     /* Add the event to the log list */
     log_event(sim_time, EVENT_STORM_END, taxi_state, 0, STORM_OFF, 0);
+
+    //if (taxi_state == TAXI_IDLE)
+      //  taxi_idle();
 }
 
 
@@ -513,6 +764,9 @@ void berth(int berth_number) {
         exit(0);
     }
 
+    if (taxi_state == TAXI_TRAVELLING_BERTHS)
+        stats.taxi_time_travelling += (int)sim_time - stats.taxi_time_travelling_last;
+
     list_remove(FIRST, LIST_RUNWAY);
     struct plane *p = (struct plane *)malloc(sizeof(struct plane *));
     p->type = (int)transfer[EVENT_TYPE];
@@ -521,14 +775,19 @@ void berth(int berth_number) {
     berths[berth_number].plane = p;
     berths[berth_number].state = BERTH_TAKEN_LOADING;
 
+
     /* update time statistics for runway queue */
-    timest((float)sim_time - transfer[TIME_LANDED], TIMEST_RUNWAY);
+    //timest((float)sim_time - transfer[TIME_LANDED], TIMEST_RUNWAY);
+    transfer[1] = sim_time;
+    transfer[2] = list_size[LIST_RUNWAY];
+    list_file(INCREASING, LIST_AVG_PLANES_RUNWAY);
 
     /* Schedule an event for the berth to finish loading */
     transfer[BERTH_NUMBER] = berth_number;
     transfer[PLANE_ID] = p->id;
-    event_schedule(sim_time+G.time_berth_deberth, EVENT_BERTH_FINISH);
     taxi_state = TAXI_BERTHING;
+    stats.taxi_time_berthing_deberthing_last = (int)sim_time;
+    event_schedule(sim_time+G.time_berth_deberth, EVENT_BERTH_FINISH);
 
     log_event(sim_time, EVENT_BERTH, taxi_state, p->id, storm_state, berth_number+1);
 }
@@ -541,7 +800,16 @@ void berth_finish(int berth_number) {
     }
 
     berths[berth_number].state = BERTH_TAKEN_LOADING;
+
+    /*  Add up the time the berth was unoccupied
+        The berth becomes occupied and starts loading at this point.  */
+    berths[berth_number].time_unoccupied += (int)sim_time - berths[berth_number].time_unoccupied_last;
+    berths[berth_number].time_loading_last = sim_time;
+
+
     taxi_state = TAXI_IDLE;
+    stats.taxi_time_idle_last = (int)sim_time;
+    stats.taxi_time_berthing_deberthing += (int)sim_time - stats.taxi_time_berthing_deberthing_last;
 
     struct plane *p = berths[berth_number].plane;
 
@@ -550,6 +818,7 @@ void berth_finish(int berth_number) {
     transfer[PLANE_ID] = p->id;
     event_schedule(sim_time+load_time, EVENT_FINISH_LOADING);
 
+    transfer[LOAD_TIME] = load_time;
     log_event(sim_time, EVENT_BERTH_FINISH, taxi_state, p->id, storm_state, berth_number+1);
 }
 
@@ -557,9 +826,22 @@ void berth_finish(int berth_number) {
 void finish_loading(int berth_number) {
     berths[berth_number].state = BERTH_TAKEN_NOT_LOADING;
     berths[berth_number].time_finish_loading = sim_time;
+
+    /*  Add up the time the berth was loading
+        The berth becomes occupied but not loading at this point.  */
+    berths[berth_number].time_loading += (int)sim_time - berths[berth_number].time_loading_last;
+    berths[berth_number].time_occupied_last = sim_time;
+
     struct plane *p = berths[berth_number].plane;
 
+    transfer[EVENT_TIME] = sim_time;
+    transfer[2] = check_num_berths_finished();
+    list_file(INCREASING, LIST_AVG_PLANES_DEBERTH);
+
     log_event(sim_time, EVENT_FINISH_LOADING, taxi_state, p->id, storm_state, berth_number+1);
+
+    //if (taxi_state == TAXI_IDLE)
+      //  taxi_idle();
 }
 
 
@@ -574,14 +856,30 @@ void deberth(int berth_number) {
         exit(0);
     }
 
+    berths[berth_number].state = BERTH_FREE;
+    /*  Add times to deberthing queue list to get stats  */
+    transfer[1] = sim_time;
+    transfer[2] = check_num_berths_finished();
+    list_file(INCREASING, LIST_AVG_PLANES_DEBERTH);
+
     /* Remove the plane from the berth */
     struct plane *p = berths[berth_number].plane;
     berths[berth_number].time_finish_loading = NULL;
 
     transfer[BERTH_NUMBER] = berth_number;
     transfer[PLANE_ID] = p->id;
-    event_schedule(sim_time+G.time_berth_deberth, EVENT_DEBERTH_FINISH);
     taxi_state = TAXI_DEBERTHING;
+    berths[berth_number].state = BERTH_FREE;
+
+    /*  Add up the time the berth was occupied but not loading
+        The berth frees up at this point.  */
+    berths[berth_number].time_occupied += (int)sim_time - berths[berth_number].time_occupied_last;
+    berths[berth_number].time_unoccupied_last = sim_time;
+
+    /* Set the time that the taxi starts berthing/deberthing */
+    stats.taxi_time_berthing_deberthing_last = (int)sim_time;
+
+    event_schedule(sim_time+G.time_berth_deberth, EVENT_DEBERTH_FINISH);
 
     log_event(sim_time, EVENT_DEBERTH, taxi_state, p->id, storm_state, berth_number+1);
     //berths[berth_number].plane = NULL;
@@ -595,17 +893,35 @@ void deberth_finish(int berth_number) {
     if (list_size[LIST_RUNWAY] == 0 || (list_size[LIST_RUNWAY] != 0 && available_berth == -1)) {
         /* If the runway queue is empty, then the taxi returns to the runway */
         taxi_state = TAXI_TRAVELLING_BERTHS;
+        stats.taxi_time_travelling_last = (int)sim_time;
         event_schedule(sim_time+G.time_taxi_travel, EVENT_TAXI_RETURNS_IDLE);
     }
     else {
         /* Else the runway queue has planes that can be taken to the berths */
         transfer[BERTH_NUMBER] = available_berth;
-        event_schedule(sim_time, EVENT_BERTH);
         taxi_state = TAXI_BERTHING;
+        event_schedule(sim_time, EVENT_BERTH);
     }
 
+
+
+    stats.taxi_time_berthing_deberthing += (int)sim_time - stats.taxi_time_berthing_deberthing_last;
+
     struct plane *p = berths[berth_number].plane;
+    berths[berth_number].state = BERTH_FREE;
     log_event(sim_time, EVENT_DEBERTH_FINISH, taxi_state, p->id, storm_state, berth_number+1);
+
+    /* Add the plane takeoff time to the in-port residence time list */
+    /*  This adds the attributes PLANE_ID and TIME_LANDED to transfer and deletes the item from the list\
+        This is because you can't edit an item in a list, so I'm deleting the item and re-adding it
+        with the new attribute (TIME_TOOK_OFF) */
+    int r = list_delete(LIST_PLANE_PORT_TIME, p->id, PLANE_ID);
+
+    //printf("r = %d\n", r);
+
+    transfer[TIME_TOOK_OFF] = sim_time;
+    list_file(INCREASING, LIST_PLANE_PORT_TIME);
+
     berths[berth_number].plane = NULL;
     free(berths[berth_number].plane);
 }
@@ -613,53 +929,53 @@ void deberth_finish(int berth_number) {
 
 void taxi_returns() {
     taxi_state = TAXI_IDLE;
+    stats.taxi_time_idle_last = (int)sim_time;
+
+    stats.taxi_time_travelling += (int)sim_time - stats.taxi_time_travelling_last;
 
     log_event(sim_time, EVENT_TAXI_RETURNS_IDLE, taxi_state, 0, storm_state, 0);
 }
 
 
 void taxi_idle() {
+
     /* Do nothing if storm is occurring */
     if (storm_state == STORM_ON)
         return;
 
-    /* Do nothing if runway queue is empty */
-    if (list_size[LIST_RUNWAY] == 0)
-        return;
-
     int finished_berth = check_berths_finished();
-
     int available_berth = check_berths_available();
+    int runway_queue_size = list_size[LIST_RUNWAY];
 
-    /* Check if berths are full */
-    if (available_berth == -1) {
-        /* If berths are full and none are finished, do nothing */
-        if (finished_berth == -1) {
-            return;
-        }
-        /* If berths are full and one is finished, deberth that plane */
-        else {
-
-            transfer[BERTH_NUMBER] = finished_berth;
-            event_schedule(sim_time, EVENT_DEBERTH);
-            taxi_state = TAXI_DEBERTHING;
-            //deberth(finished_berth);
-        }
-    }
-    else {
-        /* If berths aren't full, schedule an event to start berthing a plane in 15 minutes. */
+    /*  If the berths aren't full, and there is a plane in the
+        runway queue, then berth a plane. */
+    if (available_berth != -1 && runway_queue_size > 0) {
         transfer[BERTH_NUMBER] = available_berth;
-        event_schedule(sim_time+G.time_taxi_travel, EVENT_BERTH);
         taxi_state = TAXI_TRAVELLING_RUNWAY;
+        stats.taxi_time_idle += (int)sim_time - stats.taxi_time_idle_last;
+        stats.taxi_time_travelling_last = (int)sim_time;
+        event_schedule(sim_time+G.time_taxi_travel, EVENT_BERTH);
     }
+    /*  If no berths are finished, do nothing. */
+    else if (finished_berth == -1) {
 
+    }
+    /*  If a berth is finished, deberth that plane. */
+    else if (finished_berth > -1) {
+        transfer[BERTH_NUMBER] = finished_berth;
+        event_schedule(sim_time, EVENT_DEBERTH);
+        taxi_state = TAXI_DEBERTHING;
+        stats.taxi_time_idle += (int)sim_time - stats.taxi_time_idle_last;
+    }
 }
 
 
 void taxi_travelling_runway() {
     /*  If a storm starts while the taxi is travelling, make the taxi idle. */
-    if (storm_state == STORM_ON)
+    if (storm_state == STORM_ON) {
         taxi_state = TAXI_IDLE;
+        stats.taxi_time_idle_last = (int)sim_time;
+    }
 }
 
 
@@ -674,5 +990,9 @@ void taxi_berthing() {
 
 
 void taxi_deberthing() {
+
+}
+
+void end_simulation() {
 
 }

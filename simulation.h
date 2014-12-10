@@ -20,13 +20,22 @@
 
 
 /*  transfer indices for the event log */
-#define PLANE_TYPE   1
 #define TAXI_STATE   3
 #define PLANE_ID     4
 #define STORM_STATE  5
 #define BERTH_NUMBER 6
 #define RUNWAY_SIZE  7
-#define TIME_LANDED  8
+#define DEBERTH_QUEUE_SIZE 8
+#define TIME_LANDED  9
+
+/*  transfer indices for the in-port residence time list */
+/*  TIME_LANDED and PLANE_ID will be the same as above, for convenience */
+#define TIME_TOOK_OFF 1
+#define PLANE_TYPE   2
+
+/*  Loading time, logged only with the berth_finish event
+    Only use is for the GUI loading bars. */
+#define LOAD_TIME 10
 
 
 /*  These define the different states for the taxi.
@@ -82,7 +91,7 @@
 #define LIST_BERTH    3  /* List number for the berths (max size = 3) */
 #define LIST_AVG_PLANES_RUNWAY   4
 #define LIST_AVG_PLANES_DEBERTH  5
-#define LIST_TAXI_TIMES          6
+#define LIST_PLANE_PORT_TIME     6
 #define LIST_LOG  7
 
 #define STORM_OFF 0
@@ -109,6 +118,12 @@ extern struct berth {
     int state;
     int time_finish_loading;
 
+    int time_unoccupied;
+    int time_unoccupied_last;
+    int time_occupied;
+    int time_occupied_last;
+    int time_loading;
+    int time_loading_last;
 };
 
 extern struct taxi {
@@ -136,14 +151,19 @@ struct global {
     float time_taxi_travel;
     int time_berth_deberth;
     int num_berths;
+    int sim_length;
 }G;
 
-struct stats {
+
+/* Time statistics for the taxi states. */
+struct statistics {
     int taxi_time_idle;
     int taxi_time_idle_last;
     int taxi_time_travelling;
+    int taxi_time_travelling_last;
     int taxi_time_berthing_deberthing;
-};
+    int taxi_time_berthing_deberthing_last;
+}stats;
 
 extern void generate_input_files(void);
 extern void schedule_input_list(FILE*);
